@@ -21,12 +21,12 @@ direction_length[1338] <- 15
 direction_length[2026] <- 0
 
 close_direction <- rep(0, direction)  
-for(i in 1:d){close_direction[i] <- (open_direction[i] + direction_length[i] -1)}  
+for(i in 1:direction){close_direction[i] <- (open_direction[i] + direction_length[i] -1)}  
 
 ##which(duplicate[close_direction]) 
 
 direction_words <- rep(0, sum(direction_length)) 
-for(i in 1:d){direction_words[(sum(direction_length[0:(i-1)])+1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i])}
+for(i in 1:direction){direction_words[(sum(direction_length[0:(i-1)])+1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i])}
 
 a <- a[-direction_words]
 
