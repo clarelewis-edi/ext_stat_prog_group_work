@@ -14,7 +14,7 @@ open_direction <- grep('\\[', a)
 direction <- length(open_direction)
 
 direction_length <- rep(0, direction) 
-for(i in 1:d) {direction_length[i] <- grep('\\]', a[open_direction[i]:(open_direction[i]+100)])[1]}  
+for(i in 1:direction) {direction_length[i] <- grep('\\]', a[open_direction[i]:(open_direction[i]+100)])[1]}  
 
 unclosed_bracket <- which(is.na(direction_length))
 direction_length[1338] <- 15
@@ -39,7 +39,7 @@ a <- gsub('\\[_', '', a)
 
 # WE WANT TO DO PUNCTUATION REMOVAL BEFORE THIS STEP TO INCLUDE INSTANCES OF 'I,' AS AN EXAMPLE
 uppercase_indices <- which(a == toupper(a) & a != 'A' & a != 'I' & a != 'O')# include all of the options after we remove punctuation
-non_uppers <- a[-uppercase_indices]
+a <- a[-uppercase_indices]
 
 # return to this after we remove the punctuation
 # uppers <- unique(uppers[grep('I',uppers,fixed=TRUE)])
@@ -59,9 +59,7 @@ length(a_punc_under)
 # Remove all cases of hyphens and underscores in each word in the text
 a <- gsub(pattern = "[_-]", replacement = "", a)
 
-#### NOTE: Consider splitting hypthenated words into two seperate words. May yield better predictive power and more sensensical prompts
-
-
+#### NOTE: Consider splitting hyphenated words into two separate words. May yield better predictive power and more sensensical prompts
 
 
 #### 4(d) ####
