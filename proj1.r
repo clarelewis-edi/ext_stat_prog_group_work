@@ -92,4 +92,4 @@ word_occurences <- tabulate(index)
 #d
 # Creates a vector of the 1000 most common words by using a for loop and rank to locate and order these words
 b<- rep(0, 1000)
-for(i in 1:1000){b[i] <- words[which((rank(word_occurences, ties.method = "first")) == (61064 - i))]}
+for(i in 1:1000){b[i] <- words[which((rank(word_occurences, ties.method = "first")) == (length(word_occurences) + 1 - i))]}
