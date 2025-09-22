@@ -32,6 +32,37 @@ a <- a[-direction_words]
 
 a <- gsub('\\[_', '', a)
 
+#### 4(d) ####
+
+split_punc = function(text_vec, punc_vec){
+  
+  # Correct the format of the punctuation vector to be used in the "grep" function
+  punc_vec = paste(punc_vec, collapse = "|")
+  
+  # Find the indices of all words in the text vector that contain punctuation marks given in the punctuation vector
+  i_punc = grep(punc_vec, text_vec)
+  
+  # Create a holding vector for the elements of the text vector seperated from their corresponding punctuation, such that the length of this vector is the length of text + number of punc cases
+  # Note that this assumes that all words dont have two cases of punctuation in them. Sound assumption
+  text_vec_extra = rep(0, length(i_punc)+length(text_vec))
+  
+  # Indices in the holding vector which can be used as a reference to put the seperated punctuation as new elements
+  i_extra_elements = i_punc+1:length(i_punc)-1
+  
+  # Take out the last character of words with puncuation using the "substr" function and put them in their corresponding element in the new text vector
+  # Note: This assumes that all punctuation marks appear at the end of words. Sound assumption for the text file we are working with
+  text_vec_extra[i_extra_elements+1] = substr(text_vec[i_punc], nchar(text_vec[i_punc]), nchar(text_vec[i_punc]))
+  
+  # Create a copy of the text vector with all punctuation removed
+  text_vec_no_punc = gsub(pattern = punc_vec, replacement = "", text_vec)
+  
+  # Puts the elements/words without punctuation in their corresponding position in the new word vector
+  text_vec_extra[-i_extra_elements-1] = text_vec_no_punc
+  
+  # Return the new text vector with punctuation seperated from all elements and are noew considered there own unique element in the text vector
+  return(text_vec_extra)
+}
+
 # 4B
 
 # look for all uppercase words (excluding 'I', 'O', and 'A')
@@ -62,38 +93,7 @@ a <- gsub(pattern = "[_-]", replacement = "", a)
 #### NOTE: Consider splitting hyphenated words into two separate words. May yield better predictive power and more sensensical prompts
 
 
-#### 4(d) ####
 
-split_punc = function(text_vec, punc_vec){
-  
-  # Correct the format of the punctuation vector to be used in the "grep" function
-  punc_vec = paste(punc_vec, collapse = "|")
-  
-  # Find the indices of all words in the text vector that contain punctuation marks given in the punctuation vector
-  i_punc = grep(punc_vec, text_vec)
-  
-  # Create a holding vector for the elements of the text vector seperated from their corresponding punctuation, such that the length of this vector is the length of text + number of punc cases
-  # Note that this assumes that all words dont have two cases of punctuation in them. Sound assumption
-  text_vec_extra = rep(0, length(i_punc)+length(text_vec))
-  
-  # Indices in the holding vector which can be used as a reference to put the seperated punctuation as new elements
-  i_extra_elements = i_punc+1:length(i_punc)-1
-  
-  # Take out the last character of words with puncuation using the "substr" function and put them in their corresponding element in the new text vector
-  # Note: This assumes that all punctuation marks appear at the end of words. Sound assumption for the text file we are working with
-  text_vec_extra[i_extra_elements+1] = substr(text_vec[i_punc], nchar(text_vec[i_punc]), nchar(text_vec[i_punc]))
-  
-  # Create a copy of the text vector with all punctuation removed
-  text_vec_no_punc = gsub(pattern = punc_vec, replacement = "", text_vec)
-  
-  # Puts the elements/words without punctuation in their corresponding position in the new word vector
-  text_vec_extra[-i_extra_elements-1] = text_vec_no_punc
-  
-  # Return the new text vector with punctuation seperated from all elements and are noew considered there own unique element in the text vector
-  return(text_vec_extra)
-  
-  
-}
 #### 4(e) ####
 punc_vec = c(",","\\.",";","!",":","\\?")
 a = split_punc(a, punc_vec)
@@ -121,3 +121,29 @@ word_occurences <- tabulate(index)
 # Creates a vector of the 1000 most common words by using a for loop and rank to locate and order these words
 b<- rep(0, 1000)
 for(i in 1:1000){b[i] <- words[which((rank(word_occurences, ties.method = "first")) == (length(word_occurences) + 1 - i))]}
+
+#### 6 ####
+# a
+mlag <- 4
+token <- match(a,b)
+token
+
+# b
+#### test
+d <- c(1:20)
+R <- matrix(NA,length(d)-mlag,mlag+1)
+for (i in 1:(length(d)-mlag)) {
+  for (j in 1:(mlag+1)) {
+    R[i,j] <- d[i + j - 1]
+  }
+}
+
+## real
+M <- matrix(NA,length(a)-mlag,mlag+1)
+for (i in 1:(length(a)-mlag)) {
+  for (j in 1:(mlag+1)) {
+    M[i,j] <- token[i + j - 1]
+  }
+}
+
+
