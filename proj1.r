@@ -1,7 +1,7 @@
 # Clare Lewis (s2879721), Grace  (s), Luke  (s)
 # brief description of each person's contribution and the % they did
 
-setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work")
+##setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work")
 a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,
           fileEncoding="UTF-8")
 
@@ -13,22 +13,22 @@ a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,
 open_direction <- grep('\\[', a)  
 direction <- length(open_direction)
 
-direction_length <- rep(0, d) 
+direction_length <- rep(0, direction) 
 for(i in 1:d) {direction_length[i] <- grep('\\]', a[open_direction[i]:(open_direction[i]+100)])[1]}  
 
 unclosed_bracket <- which(is.na(direction_length))
 direction_length[1338] <- 15
 direction_length[2026] <- 0
 
-close_direction <- rep(0, d)  
-for(i in 1:d){close_direction[i] <- (open_direction[i] + direction_length[i] -1)}  
+close_direction <- rep(0, direction)  
+for(i in 1:direction){close_direction[i] <- (open_direction[i] + direction_length[i] -1)}  
 
 ##which(duplicate[close_direction]) 
 
 direction_words <- rep(0, sum(direction_length)) 
-for(i in 1:d){direction_words[(sum(direction_length[0:(i-1)])+1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i])}
+for(i in 1:direction){direction_words[(sum(direction_length[0:(i-1)])+1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i])}
 
-a <- a[-a[direction_words]]
+a <- a[-direction_words]
 
 a <- gsub('\\[_', '', a)
 
