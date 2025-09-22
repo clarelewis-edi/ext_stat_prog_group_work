@@ -76,3 +76,20 @@ split_punc = function(text_vec, punc_vec){
 a <- tolower(a)
 
 
+#### 5 ####
+#a  
+#Created a vector of unique words in the text
+words <- unique(a)
+
+#b
+# Indicates which location in the words vector each word in the full text corresponds to
+index <- match(a, words)
+
+#c
+# Counts the occurences of each word
+word_occurences <- tabulate(index)
+
+#d
+# Creates a vector of the 1000 most common words by using a for loop and rank to locate and order these words
+b<- rep(0, 1000)
+for(i in 1:1000){b[i] <- words[which((rank(word_occurences, ties.method = "first")) == (61064 - i))]}
