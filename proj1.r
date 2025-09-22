@@ -7,7 +7,7 @@ a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,
 
 #### Look at the shakespeare text ####
 
-#### 4A ####
+#### 4-a ####
 # Remove stage directions (indicated by'[_' and '_]')
 
 open_direction <- grep('\\[', a)  
@@ -66,5 +66,11 @@ a_c <- gsub(pattern = "[_-]", replacement = "", a)
 
 #### 4(d) ####
 
+
+
+#### 4-f ####
+#Make all the text lower case
+
+a <- tolower(a)
 
 
