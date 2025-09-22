@@ -57,7 +57,7 @@ a[a_punc_under]
 length(a_punc_under)
 
 # Remove all cases of hyphens and underscores in each word in the text
-a_c <- gsub(pattern = "[_-]", replacement = "", a)
+a <- gsub(pattern = "[_-]", replacement = "", a)
 
 #### NOTE: Consider splitting hypthenated words into two seperate words. May yield better predictive power and more sensensical prompts
 
@@ -66,7 +66,11 @@ a_c <- gsub(pattern = "[_-]", replacement = "", a)
 
 #### 4(d) ####
 
-
+split_punc = function(text_vec, punc_vec){
+  
+  i_punc = grep(punc_vec, text_vec, fixed = T)
+  
+}
 
 #### 4-f ####
 #Make all the text lower case
