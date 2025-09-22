@@ -7,7 +7,42 @@ a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,
 
 #### Look at the shakespeare text ####
 
-length(a)
+#### 4A ####
+# Remove stage directions (indicated by'[_' and '_]')
+
+open_direction <- grep('\\[', a)  
+direction <- length(open_direction)
+
+direction_length <- rep(0, d) 
+for(i in 1:d) {direction_length[i] <- grep('\\]', a[open_direction[i]:(open_direction[i]+100)])[1]}  
+
+unclosed_bracket <- which(is.na(direction_length))
+direction_length[1338] <- 15
+direction_length[2026] <- 0
+
+close_direction <- rep(0, d)  
+for(i in 1:d){close_direction[i] <- (open_direction[i] + direction_length[i] -1)}  
+
+##which(duplicate[close_direction]) 
+
+direction_words <- rep(0, sum(direction_length)) 
+for(i in 1:d){direction_words[(sum(direction_length[0:(i-1)])+1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i])}
+
+a <- a[-a[direction_words]]
+
+a <- gsub('\\[_', '', a)
+
+# 4B
+
+# look for all uppercase words (excluding 'I', 'O', and 'A')
+# there are some instances of these single letter words with punctuation, we want to include these
+
+# WE WANT TO DO PUNCTUATION REMOVAL BEFORE THIS STEP TO INCLUDE INSTANCES OF 'I,' AS AN EXAMPLE
+uppercase_indices <- which(a == toupper(a) & a != 'A' & a != 'I' & a != 'O')# include all of the options after we remove punctuation
+non_uppers <- a[-uppercase_indices]
+
+# return to this after we remove the punctuation
+# uppers <- unique(uppers[grep('I',uppers,fixed=TRUE)])
 
 
 #### 4(c) ####
@@ -30,16 +65,6 @@ a_c <- gsub(pattern = "[_-]", replacement = "", a)
 
 
 #### 4(d) ####
-=======
-# 4B
 
-# look for all uppercase words (excluding 'I', 'O', and 'A')
-# there are some instances of these single letter words with punctuation, we want to include these
 
-# WE WANT TO DO PUNCTUATION REMOVAL BEFORE THIS STEP TO INCLUDE INSTANCES OF 'I,' AS AN EXAMPLE
-uppercase_indices <- which(a == toupper(a) & a != 'A' & a != 'I' & a != 'O')# include all of the options after we remove punctuation
-non_uppers <- a[-uppercase_indices]
 
-# return to this after we remove the punctuation
-# uppers <- unique(uppers[grep('I',uppers,fixed=TRUE)])
->>>>>>> ba76274733b876dcbf8990ee7a2f85585df46eeb
