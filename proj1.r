@@ -146,4 +146,40 @@ for (i in 1:(length(a)-mlag)) {
   }
 }
 
+#### 7 
+next.word(key,M,M1,w=rep(1,ncol(M)-1))
+
+#key - vector
+#M - matrix
+#M1 - token vector
+#w - weights vector defined in function
+z <- c("rose", "might", "never", "die", ",", "but", "as", "the", "riper", "should", "by", "time", "decease")
+key <- c("^never$", "^die$", "^,$", "^but$")
+#a[12:18]
+#[1] "might" "never" "die"   ","     "but"   "as"    "the"  
+M1 <- token
+
+key_tokens <- grep(paste0(key,collapse='|'),b)
+
+
+for (i in 1:length(M)) {
+  
+}
+
+next.word <- function(key,M,M1,w=rep(1,ncol(M)-1)) {
+  
+}
+where key is the word sequence for which the next word is to be generated, M is as defined above, M1 is
+the vector of word tokens for the whole text and w is the vector of mixture weights (which actually don’t
+                                                                                     need to be normalized).
+The function should return a token for the next word, generated according to the
+model described above. It should be able to deal appropriately with any length of key: using reduced order
+versions of the model for short keys, and using only data from the end of key if it is too long
+
+The crucial part of the function is (repeatedly) finding the rows of M that match key (or its reduced versions).
+Suppose the current key is to be matched to columns mc:mlag of M. Now compute
+
+ii <- colSums(!(t(M[,mc:mlag,drop=FALSE])==key))
+If ii[j]=0 and is finite (see ?is.finite) then row j of M contains a match
+
 
