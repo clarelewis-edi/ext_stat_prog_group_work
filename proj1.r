@@ -146,25 +146,35 @@ for (i in 1:(length(a)-mlag)) {
   }
 }
 
-#### 7 
-next.word(key,M,M1,w=rep(1,ncol(M)-1))
+#### 7
 
-#key - vector
-#M - matrix
-#M1 - token vector
-#w - weights vector defined in function
-z <- c("rose", "might", "never", "die", ",", "but", "as", "the", "riper", "should", "by", "time", "decease")
-key <- c("^never$", "^die$", "^,$", "^but$")
-#a[12:18]
-#[1] "might" "never" "die"   ","     "but"   "as"    "the"  
-M1 <- token
+key <- c("never", "die", ",", "but")
 
-key_tokens <- grep(paste0(key,collapse='|'),b)
+key_tokens <- rep(0,length(key))
 
-
-for (i in 1:length(M)) {
-  
+for (i in 1:length(key)) {
+  key_tokens[i] <- grep(paste0("^", key[i], "$"),b)
 }
+full_sentence <- key_tokens
+
+repeat {
+  for (i in 1:mlag) {
+    matching_row_index <- which(apply(M[, i:mlag, drop = FALSE], 1, function(row) all(row == key_token)))
+    if (length(matching_row_index) > 0) break
+  }
+  next_word <- M[matching_row_index,mlag+1]
+  key_tokens <- c(key_tokens[2:mlag],sample(na.omit(next_word),1))
+  full_sentence <- append(full_sentence,key_tokens[mlag])
+  
+  if (key_tokens[mlag] == match(".",b))
+    break
+}
+output <- cat(b[full_sentence], sep=" ")
+output
+
+
+
+#### this is the instructions and code provided (we didnt use this code yet)
 
 next.word <- function(key,M,M1,w=rep(1,ncol(M)-1)) {
   
