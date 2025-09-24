@@ -2,10 +2,11 @@
 # brief description of each person's contribution and the % they did
 
 ##setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work")
-a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,
-          fileEncoding="UTF-8")
+#setwd("C:/Users/Grace Sheahan/Documents/Extended Statistical Programming/Assessment 1") ## Setting working directory to folder for Assessment 1
 
-#### Look at the shakespeare text ####
+a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,fileEncoding="UTF-8")
+
+#### Look at the Shakespeare text ####
 
 #### 4-a ####
 # Remove stage directions (indicated by'[_' and '_]')
@@ -145,51 +146,94 @@ for (i in 1:(length(a)-mlag)) {
     M[i,j] <- token[i + j - 1]
   }
 }
+# 
+#### 7 - Old Code ####
+# 
+# key <- c("never", "die", ",", "but")
+# 
+# key_tokens <- rep(0,length(key))
+# 
+# for (i in 1:length(key)) {
+#   key_tokens[i] <- grep(paste0("^", key[i], "$"),b)
+# }
+# full_sentence <- key_tokens
+# 
+# repeat {
+#   for (i in 1:mlag) {
+#     matching_row_index <- which(apply(M[, i:mlag, drop = FALSE], 1, function(row) all(row == key_token)))
+#     if (length(matching_row_index) > 0) break
+#   }
+#   next_word <- M[matching_row_index,mlag+1]
+#   key_tokens <- c(key_tokens[2:mlag],sample(na.omit(next_word),1))
+#   full_sentence <- append(full_sentence,key_tokens[mlag])
+#   
+#   if (key_tokens[mlag] == match(".",b))
+#     break
+# }
+# output <- cat(b[full_sentence], sep=" ")
+# output
+# 
+# 
+# 
+# #### this is the instructions and code provided (we didnt use this code yet)
+# 
+# next.word <- function(key,M,M1,w=rep(1,ncol(M)-1)) {
+#   
+# }
+# where key is the word sequence for which the next word is to be generated, M is as defined above, M1 is
+# the vector of word tokens for the whole text and w is the vector of mixture weights (which actually don’t
+#                                                                                      need to be normalized).
+# The function should return a token for the next word, generated according to the
+# model described above. It should be able to deal appropriately with any length of key: using reduced order
+# versions of the model for short keys, and using only data from the end of key if it is too long
+# 
+# The crucial part of the function is (repeatedly) finding the rows of M that match key (or its reduced versions).
+# Suppose the current key is to be matched to columns mc:mlag of M. Now compute
+# 
+# ii <- colSums(!(t(M[,mc:mlag,drop=FALSE])==key))
+# If ii[j]=0 and is finite (see ?is.finite) then row j of M contains a match
+# 
+# 
 
-#### 7
 
-key <- c("never", "die", ",", "but")
 
-key_tokens <- rep(0,length(key))
+#### Section 7#####
 
-for (i in 1:length(key)) {
-  key_tokens[i] <- grep(paste0("^", key[i], "$"),b)
-}
-full_sentence <- key_tokens
+mlag <- 4   # Setting mlag (temporarily)
+# 
+M <- matrix(NA,length(a)-mlag,mlag+1)
+ for (i in 1:(length(a)-mlag)) {
+   for (j in 1:(mlag+1)) {
+     M[i,j] <- token[i + j - 1]
+   }
+ }
 
-repeat {
-  for (i in 1:mlag) {
-    matching_row_index <- which(apply(M[, i:mlag, drop = FALSE], 1, function(row) all(row == key_token)))
-    if (length(matching_row_index) > 0) break
+M1 <- token
+
+key <-c()
+
+next.word <- function(key,M,M1,w=rep(1,ncol(M)-1)) { ## Returns NA for key = c()??
+  if(length(key) < mlag){key <- append(key, rep("", (mlag-length(key))), 0)}  # Ensures the key vector is at least as long as mlag before beginning - inserts blanks at the start of the vector if this is not already the case
+
+  for(i in 1:mlag){  #Starting with 1, as 1:mlag will check for matches of mlag entried. the for loop will reduce matching requirements by 1 (2:mlag) if no mlag length matches found, and will continue to reduce by 1 until a match is found
+    token_key <- match(key[(length(key)-mlag+i):length(key)],b)  # Defines a vector of length mlag of the tokens of the words in the key vector. If the key is longer than mlag it only takes the last mlag entries
+    ii <- colSums(!(t(M[,i:mlag,drop=FALSE]) == token_key))  ## Code provided by SW; this will be equal to zero only if rows match completely (!() means that matches will be marked FALSE, and vice versa. As sych when summing matches will be adding 0, so any columns without full matches will be non-zero (and non-finite if NAs))
+    
+    full_matches <- which(is.finite(ii) & ii == 0) # Returns the indices of the rows for which there is no NAs (is.finite()) and there is an exact match (== 0) 
+    
+    next_word_tokens <- M[full_matches,mlag+1] # Creates a vector of the tokens for all the words which are preceded by an exact match 
+    
+    if(length(next_word_tokens)>0){ # Checks if there are tokens in nwt; if this is the case we will sample from one of these as these are the best match
+      sampled_word <- next_word_tokens[sample(length(next_word_tokens),1)]  # Taking a sample token from the vector. We do this by sampling the length of the vector and taking the corresponding index of the vector - this works even when the vector only has a single entry (whereas a direct sample would take a sample from 1:(token number) instead of the entry itself)
+      next_word <- b[sampled_word] # Finding the word in b which corresponds to the sample word
+
+      return(next_word) # Once the next word has been defined, the function prints this and stops
+    }
+    else{ # This runs if there are no matches with the last entry of the key
+      sampled_word <- sample(M1,1) # The token is randomly sampled from the full text
+      next_word <- words[sampled_word] # The corresponding word from the full word index is taken
+      return(next_word) # This generated word is returned and the function ends
+    }
   }
-  next_word <- M[matching_row_index,mlag+1]
-  key_tokens <- c(key_tokens[2:mlag],sample(na.omit(next_word),1))
-  full_sentence <- append(full_sentence,key_tokens[mlag])
-  
-  if (key_tokens[mlag] == match(".",b))
-    break
 }
-output <- cat(b[full_sentence], sep=" ")
-output
-
-
-
-#### this is the instructions and code provided (we didnt use this code yet)
-
-next.word <- function(key,M,M1,w=rep(1,ncol(M)-1)) {
-  
-}
-where key is the word sequence for which the next word is to be generated, M is as defined above, M1 is
-the vector of word tokens for the whole text and w is the vector of mixture weights (which actually don’t
-                                                                                     need to be normalized).
-The function should return a token for the next word, generated according to the
-model described above. It should be able to deal appropriately with any length of key: using reduced order
-versions of the model for short keys, and using only data from the end of key if it is too long
-
-The crucial part of the function is (repeatedly) finding the rows of M that match key (or its reduced versions).
-Suppose the current key is to be matched to columns mc:mlag of M. Now compute
-
-ii <- colSums(!(t(M[,mc:mlag,drop=FALSE])==key))
-If ii[j]=0 and is finite (see ?is.finite) then row j of M contains a match
-
 
