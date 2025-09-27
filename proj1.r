@@ -237,3 +237,50 @@ next.word <- function(key,M,M1,w=rep(1,ncol(M)-1)) { ## Returns NA for key = c()
   }
 }
 
+
+#### 8 ####
+starter.word.token <- function(start_word){ ###Defining a starter word token function
+  if (missing(start_word)) {  ## If a starter word is not specified a starter token is randomly sampled from the text (excluding punctuation)
+    start_token <- sample(M[! M %in% punc_tokens], 1)
+    start_word <- b[start_token]
+    return(start_token)
+  } #else if (start_word ! %in% b){
+  # Should we deal with NAs (specified but not common words) in some way (randomly generate token and reset word) or leave as NA?
+  # Also should deal with punctuation being inserted - set to NA or randomly generate token?
+  # next.word can deal with NAs but less likely to make sense
+  #}
+  else {
+    start_token <- match(start_word, b)
+    return(start_token)
+  }
+}
+
+# starter.word <- function(start_word){
+#   if(missing(start_word)){start_word <- b[starter.word.token()]
+#   return(start_word)}
+#   else{return(start_word)}
+# }
+
+#### 9 ####
+
+sentence <- c()
+
+generate.sentence <- function(start_word){
+  if (missing(start_word)){sentence <- b[starter.word.token()]
+  } else {
+    sentence <- append(sentence, start_word)
+  }
+  
+  repeat{
+    next_word <- next.word(sentence, M, M1, w)
+    if(next_word %in% punc_vec & sentence[length(sentence)] %in% punc_vec){
+    } else
+    {sentence <- append(sentence, next_word)}
+    
+    if(sentence[length(sentence)] == '.'){
+      break
+    }
+  }
+  full_sentence <- paste(sentence, collapse = " ")
+  return(full_sentence)
+}
