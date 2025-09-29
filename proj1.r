@@ -275,24 +275,25 @@ starter.word.token <- function(start_word){ ###Defining a starter word token fun
 
 sentence <- c()
 
-punc_tokens <- na.omit(b[punc_vec])
+#punc_tokens <- na.omit(b[punc_vec])
 
-generate.sentence <- function(start_word){
-  if (missing(start_word)){sentence <- b[starter.word.token()]
-  } else {
-    sentence <- append(sentence, start_word)
+generate.sentence <- function(sentence_prompt){
+  
+  if(missing(sentence_prompt)){sentence_prompt <- b[starter.word.token()]
   }
   
+  sentence_prompt <- unlist(strsplit(sentence_prompt, split = " "))
+  
   repeat{
-    next_word <- next.word(sentence, M, M1, w)
-    if(next_word %in% punc_vec & sentence[length(sentence)] %in% punc_vec){
+    next_word <- next.word(sentence_prompt, M, M1, w=c(1000, 100, 10, 1))
+    if(next_word %in% punc_vec & sentence_prompt[length(sentence_prompt)] %in% punc_vec){
     } else
-    {sentence <- append(sentence, next_word)}
+    {sentence_prompt <- append(sentence_prompt, next_word)}
     
-    if(sentence[length(sentence)] == '.'){
+    if(sentence_prompt[length(sentence_prompt)] == '.'){
       break
     }
   }
-  full_sentence <- paste(sentence, collapse = " ")
+  full_sentence <- paste(sentence_prompt, collapse = " ")
   return(full_sentence)
 }
