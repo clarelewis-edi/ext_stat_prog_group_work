@@ -209,6 +209,8 @@ key <-c()
 
 next.word <- function(key,M,M1,w=rep(1,ncol(M)-1)) { ## Returns NA for key = c()??
   if(length(key) < mlag){key <- append(key, rep("", (mlag-length(key))), 0)}  # Ensures the key vector is at least as long as mlag before beginning - inserts blanks at the start of the vector if this is not already the case
+  weights = c()
+  next_token = c()
   
   for(i in 1:mlag){  #Starting with 1, as 1:mlag will check for matches of mlag entried. the for loop will reduce matching requirements by 1 (2:mlag) if no mlag length matches found, and will continue to reduce by 1 until a match is found
     token_key <- match(key[(length(key)-mlag+i):length(key)],b)  # Defines a vector of length mlag of the tokens of the words in the key vector. If the key is longer than mlag it only takes the last mlag entries
@@ -217,20 +219,24 @@ next.word <- function(key,M,M1,w=rep(1,ncol(M)-1)) { ## Returns NA for key = c()
     full_matches <- which(is.finite(ii) & ii == 0) # Returns the indices of the rows for which there is no NAs (is.finite()) and there is an exact match (== 0) 
     
     next_word_tokens <- na.omit(M[full_matches,mlag+1]) # Creates a vector of the tokens for all the words which are preceded by an exact match 
+    weights <- append(weights, rep(w[i],length(next_word_tokens)))
+    next_token <- append(next_token, next_word_tokens)
+  }
+  if(length(next_token)==0){
+    next_word <- b[sample(na.omit(M1),1)]
+    # Checks if there are tokens in nwt; if this is the case we will sample from one of these as these are the best match
+    # sampled_word <- next_word_tokens[na.omit(sample(length(next_word_tokens)),1)] # Taking a sample token from the vector. We do this by sampling the length of the vector and taking the corresponding index of the vector - this works even when the vector only has a single entry (whereas a direct sample would take a sample from 1:(token number) instead of the entry itself)
+    # next_word <- b[sampled_word] # Finding the word in b which corresponds to the sample word
     
-    if(length(next_word_tokens)>0){ # Checks if there are tokens in nwt; if this is the case we will sample from one of these as these are the best match
-      sampled_word <- next_word_tokens[sample(length(next_word_tokens),1)]  # Taking a sample token from the vector. We do this by sampling the length of the vector and taking the corresponding index of the vector - this works even when the vector only has a single entry (whereas a direct sample would take a sample from 1:(token number) instead of the entry itself)
-      next_word <- b[sampled_word] # Finding the word in b which corresponds to the sample word
-      
-      return(next_word) # Once the next word has been defined, the function prints this and stops
-    }
-    else{ # This runs if there are no matches with the last entry of the key
-      sampled_word <- sample(na.omit(M1),1) # The token is randomly sampled from the full text token vector (M1) with NAs omitted
-      next_word <- b[sampled_word] # The corresponding word from the full word index is taken
-      return(next_word) # This generated word is returned and the function ends
-    }
+    return(next_word) # Once the next word has been defined, the function prints this and stops
+  }
+  else{
+    next_word <- b[sample(next_token, size = 1, prob = weights)]
+    return(next_word)
   }
 }
+
+# next.word(key_token,M,M1,w = c(1000,0,0,1))
 
 #### 8 ####
 starter.word.token <- function(start_word){ ###Defining a starter word token function
