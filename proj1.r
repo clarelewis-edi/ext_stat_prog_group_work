@@ -8,7 +8,7 @@ a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,fileEncodi
 
 #### Look at the Shakespeare text ####
 
-#### 4(a) ####
+#### 4-a ####
 # Remove stage directions (indicated by'[_' and '_]')
 
 open_direction <- grep('\\[', a)  
@@ -32,36 +32,6 @@ for(i in 1:direction){direction_words[(sum(direction_length[0:(i-1)])+1):(sum(di
 a <- a[-direction_words]
 
 a <- gsub('\\[_', '', a)
-
-
-#### 4(b) ####
-
-# look for all uppercase words (excluding 'I', 'O', and 'A')
-# there are some instances of these single letter words with punctuation, we want to include these
-
-# WE WANT TO DO PUNCTUATION REMOVAL BEFORE THIS STEP TO INCLUDE INSTANCES OF 'I,' AS AN EXAMPLE
-uppercase_indices <- which(a == toupper(a) & a != 'A' & a != 'I' & a != 'O')# include all of the options after we remove punctuation
-a <- a[-uppercase_indices]
-
-# return to this after we remove the punctuation
-# uppers <- unique(uppers[grep('I',uppers,fixed=TRUE)])
-
-#### 4(c) ####
-
-# View all words that contain a hyphen or an underscore in "a" 
-a_punc_hyph = grep("-", a, fixed = T )
-a[a_punc_hyph]
-length(a_punc_hyph)
-
-a_punc_under = grep("_", a, fixed = T )
-a[a_punc_under]
-length(a_punc_under)
-
-# Remove all cases of hyphens and underscores in each word in the text
-a <- gsub(pattern = "[_-]", replacement = "", a)
-
-#### NOTE: Consider splitting hyphenated words into two separate words. May yield better predictive power and more sensensical prompts
-
 
 #### 4(d) ####
 
@@ -94,6 +64,30 @@ split_punc = function(text_vec, punc_vec){
   return(text_vec_extra)
 }
 
+# 4B
+
+# look for all uppercase words (excluding 'I', 'O', and 'A')
+# there are some instances of these single letter words with punctuation, we want to include these
+
+# WE WANT TO DO PUNCTUATION REMOVAL BEFORE THIS STEP TO INCLUDE INSTANCES OF 'I,' AS AN EXAMPLE
+uppercase_indices <- which(a == toupper(a) & a != 'A' & a != 'I' & a != 'O')# include all of the options after we remove punctuation
+a <- a[-uppercase_indices]
+
+# return to this after we remove the punctuation
+# uppers <- unique(uppers[grep('I',uppers,fixed=TRUE)])
+
+
+#### 4(c) ####
+
+# View all words that contain a hyphen or an underscore in "a" 
+a_punc_hyph = grep("-", a, fixed = T )
+
+a_punc_under = grep("_", a, fixed = T )
+
+# Remove all cases of hyphens and underscores in each word in the text
+a <- gsub(pattern = "[_-]", replacement = "", a)
+
+#### NOTE: Consider splitting hyphenated words into two separate words. May yield better predictive power and more sensensical prompts
 
 
 
@@ -101,7 +95,7 @@ split_punc = function(text_vec, punc_vec){
 punc_vec = c(",","\\.",";","!",":","\\?")
 a = split_punc(a, punc_vec)
 
-#### 4(f) ####
+#### 4-f ####
 #Make all the text lower case
 
 a <- tolower(a)
@@ -129,7 +123,6 @@ for(i in 1:1000){b[i] <- words[which((rank(word_occurences, ties.method = "first
 # a
 mlag <- 4
 token <- match(a,b)
-token
 
 # b
 #### test
@@ -204,11 +197,11 @@ for (i in 1:(length(a)-mlag)) {
 mlag <- 4   # Setting mlag (temporarily)
 # 
 M <- matrix(NA,length(a)-mlag,mlag+1)
- for (i in 1:(length(a)-mlag)) {
-   for (j in 1:(mlag+1)) {
-     M[i,j] <- token[i + j - 1]
-   }
- }
+for (i in 1:(length(a)-mlag)) {
+  for (j in 1:(mlag+1)) {
+    M[i,j] <- token[i + j - 1]
+  }
+}
 
 M1 <- token
 
@@ -216,29 +209,28 @@ key <-c()
 
 next.word <- function(key,M,M1,w=rep(1,ncol(M)-1)) { ## Returns NA for key = c()??
   if(length(key) < mlag){key <- append(key, rep("", (mlag-length(key))), 0)}  # Ensures the key vector is at least as long as mlag before beginning - inserts blanks at the start of the vector if this is not already the case
-
+  
   for(i in 1:mlag){  #Starting with 1, as 1:mlag will check for matches of mlag entried. the for loop will reduce matching requirements by 1 (2:mlag) if no mlag length matches found, and will continue to reduce by 1 until a match is found
     token_key <- match(key[(length(key)-mlag+i):length(key)],b)  # Defines a vector of length mlag of the tokens of the words in the key vector. If the key is longer than mlag it only takes the last mlag entries
     ii <- colSums(!(t(M[,i:mlag,drop=FALSE]) == token_key))  ## Code provided by SW; this will be equal to zero only if rows match completely (!() means that matches will be marked FALSE, and vice versa. As sych when summing matches will be adding 0, so any columns without full matches will be non-zero (and non-finite if NAs))
     
     full_matches <- which(is.finite(ii) & ii == 0) # Returns the indices of the rows for which there is no NAs (is.finite()) and there is an exact match (== 0) 
     
-    next_word_tokens <- M[full_matches,mlag+1] # Creates a vector of the tokens for all the words which are preceded by an exact match 
+    next_word_tokens <- na.omit(M[full_matches,mlag+1]) # Creates a vector of the tokens for all the words which are preceded by an exact match 
     
     if(length(next_word_tokens)>0){ # Checks if there are tokens in nwt; if this is the case we will sample from one of these as these are the best match
       sampled_word <- next_word_tokens[sample(length(next_word_tokens),1)]  # Taking a sample token from the vector. We do this by sampling the length of the vector and taking the corresponding index of the vector - this works even when the vector only has a single entry (whereas a direct sample would take a sample from 1:(token number) instead of the entry itself)
       next_word <- b[sampled_word] # Finding the word in b which corresponds to the sample word
-
+      
       return(next_word) # Once the next word has been defined, the function prints this and stops
     }
     else{ # This runs if there are no matches with the last entry of the key
-      sampled_word <- sample(M1,1) # The token is randomly sampled from the full text
-      next_word <- words[sampled_word] # The corresponding word from the full word index is taken
+      sampled_word <- sample(na.omit(M1),1) # The token is randomly sampled from the full text token vector (M1) with NAs omitted
+      next_word <- b[sampled_word] # The corresponding word from the full word index is taken
       return(next_word) # This generated word is returned and the function ends
     }
   }
 }
-
 
 #### 8 ####
 starter.word.token <- function(start_word){ ###Defining a starter word token function
@@ -266,6 +258,8 @@ starter.word.token <- function(start_word){ ###Defining a starter word token fun
 #### 9 ####
 
 sentence <- c()
+
+punc_tokens <- na.omit(b[punc_vec])
 
 generate.sentence <- function(start_word){
   if (missing(start_word)){sentence <- b[starter.word.token()]
