@@ -239,22 +239,32 @@ next.word <- function(key,M,M1,w=rep(1,ncol(M)-1)) { ## Returns NA for key = c()
 # next.word(key_token,M,M1,w = c(1000,0,0,1))
 
 #### 8 ####
+
 starter.word.token <- function(start_word){ ###Defining a starter word token function
+  start_word <- tolower(start_word)
+  
+  punc_vec <- append(punc_vec, c('?', '.'))
+  punc_tokens <- na.omit(b[punc_vec])
+  
   if (missing(start_word)) {  ## If a starter word is not specified a starter token is randomly sampled from the text (excluding punctuation)
-    start_token <- sample(M[! M %in% punc_tokens], 1)
+    start_token <- sample(na.omit(M1[! M1 %in% punc_tokens]), 1)
     start_word <- b[start_token]
     return(start_token)
-  } #else if (start_word ! %in% b){
-  # Should we deal with NAs (specified but not common words) in some way (randomly generate token and reset word) or leave as NA?
-  # Also should deal with punctuation being inserted - set to NA or randomly generate token?
-  # next.word can deal with NAs but less likely to make sense
-  #}
-  else {
-    start_token <- match(start_word, b)
-    return(start_token)
   }
+  
+  else if (start_word %in% punc_vec){
+    print("Error: This is punctuation, not a valid start word; A random token has been generated instead.")
+    start_token <- sample(na.omit(M1[! M1 %in% punc_tokens]), 1)
+  }
+  
+  else if (!start_word %in% b){
+    print("Error: This is not a recognized common word; A random token has been generated instead.")
+    start_token <- sample(na.omit(M1[! M1 %in% punc_tokens]), 1)
+  }
+  
+  else {start_token <- match(start_word, b)}
+  return(start_token)
 }
-
 # starter.word <- function(start_word){
 #   if(missing(start_word)){start_word <- b[starter.word.token()]
 #   return(start_word)}
