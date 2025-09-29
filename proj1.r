@@ -8,7 +8,7 @@ a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,fileEncodi
 
 #### Look at the Shakespeare text ####
 
-#### 4-a ####
+#### 4(a) ####
 # Remove stage directions (indicated by'[_' and '_]')
 
 open_direction <- grep('\\[', a)  
@@ -32,6 +32,36 @@ for(i in 1:direction){direction_words[(sum(direction_length[0:(i-1)])+1):(sum(di
 a <- a[-direction_words]
 
 a <- gsub('\\[_', '', a)
+
+
+#### 4(b) ####
+
+# look for all uppercase words (excluding 'I', 'O', and 'A')
+# there are some instances of these single letter words with punctuation, we want to include these
+
+# WE WANT TO DO PUNCTUATION REMOVAL BEFORE THIS STEP TO INCLUDE INSTANCES OF 'I,' AS AN EXAMPLE
+uppercase_indices <- which(a == toupper(a) & a != 'A' & a != 'I' & a != 'O')# include all of the options after we remove punctuation
+a <- a[-uppercase_indices]
+
+# return to this after we remove the punctuation
+# uppers <- unique(uppers[grep('I',uppers,fixed=TRUE)])
+
+#### 4(c) ####
+
+# View all words that contain a hyphen or an underscore in "a" 
+a_punc_hyph = grep("-", a, fixed = T )
+a[a_punc_hyph]
+length(a_punc_hyph)
+
+a_punc_under = grep("_", a, fixed = T )
+a[a_punc_under]
+length(a_punc_under)
+
+# Remove all cases of hyphens and underscores in each word in the text
+a <- gsub(pattern = "[_-]", replacement = "", a)
+
+#### NOTE: Consider splitting hyphenated words into two separate words. May yield better predictive power and more sensensical prompts
+
 
 #### 4(d) ####
 
@@ -64,34 +94,6 @@ split_punc = function(text_vec, punc_vec){
   return(text_vec_extra)
 }
 
-# 4B
-
-# look for all uppercase words (excluding 'I', 'O', and 'A')
-# there are some instances of these single letter words with punctuation, we want to include these
-
-# WE WANT TO DO PUNCTUATION REMOVAL BEFORE THIS STEP TO INCLUDE INSTANCES OF 'I,' AS AN EXAMPLE
-uppercase_indices <- which(a == toupper(a) & a != 'A' & a != 'I' & a != 'O')# include all of the options after we remove punctuation
-a <- a[-uppercase_indices]
-
-# return to this after we remove the punctuation
-# uppers <- unique(uppers[grep('I',uppers,fixed=TRUE)])
-
-
-#### 4(c) ####
-
-# View all words that contain a hyphen or an underscore in "a" 
-a_punc_hyph = grep("-", a, fixed = T )
-a[a_punc_hyph]
-length(a_punc_hyph)
-
-a_punc_under = grep("_", a, fixed = T )
-a[a_punc_under]
-length(a_punc_under)
-
-# Remove all cases of hyphens and underscores in each word in the text
-a <- gsub(pattern = "[_-]", replacement = "", a)
-
-#### NOTE: Consider splitting hyphenated words into two separate words. May yield better predictive power and more sensensical prompts
 
 
 
@@ -99,7 +101,7 @@ a <- gsub(pattern = "[_-]", replacement = "", a)
 punc_vec = c(",","\\.",";","!",":","\\?")
 a = split_punc(a, punc_vec)
 
-#### 4-f ####
+#### 4(f) ####
 #Make all the text lower case
 
 a <- tolower(a)
