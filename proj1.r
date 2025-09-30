@@ -4,36 +4,34 @@
 ##setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work")
 #setwd("C:/Users/Grace Sheahan/Documents/Extended Statistical Programming/Assessment 1") ## Setting working directory to folder for Assessment 1
 
-a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,fileEncoding="UTF-8")
+a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,fileEncoding="UTF-8") # Scanning the complete works of shakespear in under the name 'a'
 
 #### Look at the Shakespeare text ####
 
-#### 4A ####
 # Remove stage directions (indicated by'[_' and '_]')
-
-open_direction <- grep('\\[', a)  
+open_direction <- grep('\\[_', a)  
 direction <- length(open_direction)
 
 direction_length <- rep(0, direction) 
-for (i in 1:direction) {
-  direction_length[i] <- grep('\\]', a[open_direction[i]:(open_direction[i] + 100)])[1]
-}  
+for(i in 1:direction) {direction_length[i] <- grep('\\_]|\\.]', a[open_direction[i]:(open_direction[i]+100)])[1]}
 
-unclosed_bracket <- which(is.na(direction_length))
-direction_length[1338] <- 15
-direction_length[2026] <- 0
+unclosed_direction <- which(is.na(direction_length))
+
+# unclosed_direction
+
+# a[open_direction[unclosed_direction[1]]:(open_direction[unclosed_direction[1]+20)]
+# a[open_direction[unclosed_direction[2]]:(open_direction[unclosed_direction[2]+20)]
+direction_length[unclosed_direction[2]] <- 10
+
+open_direction <- open_direction[-unclosed_direction[1]]
+direction_length <- direction_length[-unclosed_direction[1]]
+direction <- direction-1
 
 close_direction <- rep(0, direction)  
-for (i in 1:direction) {
-  close_direction[i] <- (open_direction[i] + direction_length[i] - 1)
-}  
-
-##which(duplicate[close_direction]) 
+for(i in 1:direction){close_direction[i] <- (open_direction[i] + direction_length[i] -1)}  
 
 direction_words <- rep(0, sum(direction_length)) 
-for (i in 1:direction) {
-  direction_words[(sum(direction_length[0:(i - 1)]) + 1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i])
-}
+for(i in 1:direction){direction_words[(sum(direction_length[0:(i-1)])+1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i])}
 
 a <- a[-direction_words]
 
@@ -206,27 +204,23 @@ starter.word.token <- function(start_word){ ###Defining a starter word token fun
 
 #punc_tokens <- na.omit(b[punc_vec]) do we need this line?
 
-generate.sentence <- function(sentence_prompt) {
+generate.sentence <- function(sentence_prompt){ # Defining a generate sentence function with a parameter sentence prompt
   
-  if (missing(sentence_prompt)) {
-    sentence_prompt <- b[starter.word.token()]
+  if(missing(sentence_prompt)){sentence_prompt <- b[starter.word.token()] # Accounts for no prompt being provided by generating a starter word (using starter.word.token() to generate a token and taking the corresponding b value)
   }
   
-  sentence_prompt <- unlist(strsplit(sentence_prompt, split = " "))
+  sentence_prompt <- unlist(strsplit(sentence_prompt, split = " ")) # If the sentence prompt is several words long, it is redefined as a vector split into its individual words
   
   repeat{
-    next_word <- next.word(sentence_prompt, M, M1, w=c(1000, 100, 10, 1)) # do we want to assign values to w here or outside the function
-    if (next_word %in% punc_vec & sentence_prompt[length(sentence_prompt)] %in% punc_vec) { # we have an empty if statement here?
-    }
-    else {
-      sentence_prompt <- append(sentence_prompt, next_word)
-    }
+    next_word <- next.word(sentence_prompt, M, M1, w=c(1000, 100, 10, 1)) # Runs next_word, to find the appropriate next word
+    if(next_word %in% punc_vec & sentence_prompt[length(sentence_prompt)] %in% punc_vec){ # Checks if the last and next word are both punctuation, if so the next word is discarded
+    } else
+    {sentence_prompt <- append(sentence_prompt, next_word)} # The next word is added to the end of the sentence prompt vector
     
-    if (sentence_prompt[length(sentence_prompt)] == '.') {
-      break
+    if(sentence_prompt[length(sentence_prompt)] == '.'){ # Checks if the final value in the sentence prompt is a full stop
+      break # Ends the repeat as the sentence has ended
     }
   }
-  
-  full_sentence <- paste(sentence_prompt, collapse = " ")
-  return(full_sentence)
+  full_sentence <- paste(sentence_prompt, collapse = " ") # Concatenates the vector of sentence words into a single string, separating the words with a space
+  return(full_sentence) # Prints the full sentence
 }
