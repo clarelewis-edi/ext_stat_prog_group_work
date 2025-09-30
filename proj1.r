@@ -241,8 +241,6 @@ next.word <- function(key,M,M1,w=rep(1,ncol(M)-1)) { ## Returns NA for key = c()
 #### 8 ####
 
 starter.word.token <- function(start_word){ ###Defining a starter word token function
-  start_word <- tolower(start_word)
-  
   punc_vec <- append(punc_vec, c('?', '.'))
   punc_tokens <- na.omit(b[punc_vec])
   
@@ -251,8 +249,9 @@ starter.word.token <- function(start_word){ ###Defining a starter word token fun
     start_word <- b[start_token]
     return(start_token)
   }
+  start_word <- tolower(start_word)
   
-  else if (start_word %in% punc_vec){
+  if (start_word %in% punc_vec){
     print("Error: This is punctuation, not a valid start word; A random token has been generated instead.")
     start_token <- sample(na.omit(M1[! M1 %in% punc_tokens]), 1)
   }
