@@ -177,7 +177,7 @@ next.word <- function(key ,M, M1, w) {
 
 #### 8 ####
 
-starter.word.token <- function(start_word) { ###Defining a starter word token function
+starter.word.token <- function(start_word){ ###Defining a starter word token function
   punc_vec <- append(punc_vec, c('?', '.'))
   punc_tokens <- na.omit(b[punc_vec])
   
@@ -186,7 +186,6 @@ starter.word.token <- function(start_word) { ###Defining a starter word token fu
     start_word <- b[start_token]
     return(start_token)
   }
-  
   start_word <- tolower(start_word)
   
   if (start_word %in% punc_vec){
@@ -199,10 +198,7 @@ starter.word.token <- function(start_word) { ###Defining a starter word token fu
     start_token <- sample(na.omit(M1[! M1 %in% punc_tokens]), 1)
   }
   
-  else {
-    start_token <- match(start_word, b)
-  }
-  
+  else {start_token <- match(start_word, b)}
   return(start_token)
 }
 
