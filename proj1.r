@@ -10,21 +10,26 @@ a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,fileEncodi
 
 #### 4-a ####
 # Remove stage directions (indicated by'[_' and '_]')
-
-open_direction <- grep('\\[', a)  
+open_direction <- grep('\\[_', a)  
 direction <- length(open_direction)
 
 direction_length <- rep(0, direction) 
-for(i in 1:direction) {direction_length[i] <- grep('\\]', a[open_direction[i]:(open_direction[i]+100)])[1]}  
+for(i in 1:direction) {direction_length[i] <- grep('\\_]|\\.]', a[open_direction[i]:(open_direction[i]+100)])[1]}
 
-unclosed_bracket <- which(is.na(direction_length))
-direction_length[1338] <- 15
-direction_length[2026] <- 0
+unclosed_direction <- which(is.na(direction_length))
+
+# unclosed_direction
+
+# a[open_direction[unclosed_direction[1]]:(open_direction[unclosed_direction[1]+20)]
+# a[open_direction[unclosed_direction[2]]:(open_direction[unclosed_direction[2]+20)]
+direction_length[unclosed_direction[2]] <- 10
+
+open_direction <- open_direction[-unclosed_direction[1]]
+direction_length <- direction_length[-unclosed_direction[1]]
+direction <- direction-1
 
 close_direction <- rep(0, direction)  
 for(i in 1:direction){close_direction[i] <- (open_direction[i] + direction_length[i] -1)}  
-
-##which(duplicate[close_direction]) 
 
 direction_words <- rep(0, sum(direction_length)) 
 for(i in 1:direction){direction_words[(sum(direction_length[0:(i-1)])+1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i])}
@@ -32,6 +37,7 @@ for(i in 1:direction){direction_words[(sum(direction_length[0:(i-1)])+1):(sum(di
 a <- a[-direction_words]
 
 a <- gsub('\\[_', '', a)
+
 
 #### 4(d) ####
 
