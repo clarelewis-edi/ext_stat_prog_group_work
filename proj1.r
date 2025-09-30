@@ -4,39 +4,39 @@
 ##setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work")
 #setwd("C:/Users/Grace Sheahan/Documents/Extended Statistical Programming/Assessment 1") ## Setting working directory to folder for Assessment 1
 
-a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,fileEncoding="UTF-8")
+a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,fileEncoding="UTF-8") # Scanning the complete works of shakespear in under the name 'a'
 
 #### Look at the Shakespeare text ####
 
 #### 4-a ####
-# Remove stage directions (indicated by'[_' and '_]')
-open_direction <- grep('\\[_', a)  
-direction <- length(open_direction)
+
+# Removing stage directions (indicated by'[_' and '_]')
+
+open_direction <- grep('\\[_', a)  # Identifying opening index of stage directions by the occurrence of [_ 
+direction <- length(open_direction) # The total number of stage directions identified
 
 direction_length <- rep(0, direction) 
-for(i in 1:direction) {direction_length[i] <- grep('\\_]|\\.]', a[open_direction[i]:(open_direction[i]+100)])[1]}
+for(i in 1:direction) {direction_length[i] <- grep("\\_]|\\.]|’]", a[open_direction[i]:(open_direction[i]+100)])[1]} # Vector defines the length of directions using the position of the next closed bracket relative to the corresponding opening.
 
-unclosed_direction <- which(is.na(direction_length))
+unclosed_direction <- which(is.na(direction_length)) # Locating any directions for which a close was not found
 
 # unclosed_direction
 
-# a[open_direction[unclosed_direction[1]]:(open_direction[unclosed_direction[1]+20)]
-# a[open_direction[unclosed_direction[2]]:(open_direction[unclosed_direction[2]+20)]
-direction_length[unclosed_direction[2]] <- 10
+# a[open_direction[unclosed_direction]:(open_direction[unclosed_direction]+20)] # Examined this to identify the causes of the issue - Is not a direction
 
-open_direction <- open_direction[-unclosed_direction[1]]
-direction_length <- direction_length[-unclosed_direction[1]]
-direction <- direction-1
+open_direction <- open_direction[-unclosed_direction[1]] # Removing this location as there is not actually a direction there (per manual check)
+direction_length <- direction_length[-unclosed_direction[1]] # Removing the corresponding (NA) length to the removed opening location
+direction <- direction-1 # Accounting for the removal of the index of the inaccurately located direction
 
 close_direction <- rep(0, direction)  
-for(i in 1:direction){close_direction[i] <- (open_direction[i] + direction_length[i] -1)}  
+for(i in 1:direction){close_direction[i] <- (open_direction[i] + direction_length[i] -1)}  # The close location is the length of the direction after the direction opening (minus 1 as the length counts both the starting and ending values)
 
 direction_words <- rep(0, sum(direction_length)) 
-for(i in 1:direction){direction_words[(sum(direction_length[0:(i-1)])+1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i])}
+for(i in 1:direction){direction_words[(sum(direction_length[0:(i-1)])+1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i])} # Contains the indices of all words which are stage directions (all words between open and close of a direction inclusive)
 
-a <- a[-direction_words]
+a <- a[-direction_words] # Removes all direction words from a
 
-a <- gsub('\\[_', '', a)
+a <- gsub('\\[_', '', a) # Removing the [_ which was identified as an error above using manual checking
 
 
 #### 4(d) ####
@@ -246,35 +246,30 @@ next.word <- function(key,M,M1,w=rep(1,ncol(M)-1)) { ## Returns NA for key = c()
 
 #### 8 ####
 
-starter.word.token <- function(start_word){ ###Defining a starter word token function
-  punc_vec <- append(punc_vec, c('?', '.'))
-  punc_tokens <- na.omit(b[punc_vec])
+starter.word.token <- function(start_word){ # Defining a starter word token function with a parameter start_word
+  punc_vec <- append(punc_vec, c('?', '.')) # Adding ? and . to punc_vec, as the current versions contained in this vector (\\. and \\?) will not be recognized as matches to themselves in b
+  punc_tokens <- na.omit(b[punc_vec]) # Finding the tokens of any punctuation in b
   
-  if (missing(start_word)) {  ## If a starter word is not specified a starter token is randomly sampled from the text (excluding punctuation)
-    start_token <- sample(na.omit(M1[! M1 %in% punc_tokens]), 1)
-    start_word <- b[start_token]
+  if (missing(start_word)) {  ## Checking if a starter word is specified, and begins defining action in the case it is not
+    start_token <- sample(na.omit(M1[! M1 %in% punc_tokens]), 1) #  A starter token is randomly sampled from the text token vector M1 (excluding punctuation)
+#    start_word <- b[start_token]  # Defines the word corresponding to the sampled token
     return(start_token)
   }
-  start_word <- tolower(start_word)
+  start_word <- tolower(start_word) # Converts to lower case to ensure match is found in b if possible
   
-  if (start_word %in% punc_vec){
-    print("Error: This is punctuation, not a valid start word; A random token has been generated instead.")
-    start_token <- sample(na.omit(M1[! M1 %in% punc_tokens]), 1)
+  if (start_word %in% punc_vec){ # Checks if the provided starter word is actually punctuation
+    print("Error: This is punctuation, not a valid start word; A random token has been generated instead.") # Error message and notification to user of randomly sampled replacement
+    start_token <- sample(na.omit(M1[! M1 %in% punc_tokens]), 1) # Randomly samples word_token as provided starter not suitable
   }
   
   else if (!start_word %in% b){
-    print("Error: This is not a recognized common word; A random token has been generated instead.")
-    start_token <- sample(na.omit(M1[! M1 %in% punc_tokens]), 1)
+    print("Error: This is not a recognized common word; A random token has been generated instead.") # Error message and notification to user of randomly sampled replacement
+    start_token <- sample(na.omit(M1[! M1 %in% punc_tokens]), 1) # Randomly samples word_token as provided starter word is not tokenized
   }
   
-  else {start_token <- match(start_word, b)}
+  else {start_token <- match(start_word, b)} # Finds corresponding token if the starter word is appropriate (word in b)
   return(start_token)
 }
-# starter.word <- function(start_word){
-#   if(missing(start_word)){start_word <- b[starter.word.token()]
-#   return(start_word)}
-#   else{return(start_word)}
-# }
 
 #### 9 ####
 
@@ -282,23 +277,23 @@ sentence <- c()
 
 #punc_tokens <- na.omit(b[punc_vec])
 
-generate.sentence <- function(sentence_prompt){
+generate.sentence <- function(sentence_prompt){ # Defining a generate sentence function with a parameter sentence prompt
   
-  if(missing(sentence_prompt)){sentence_prompt <- b[starter.word.token()]
+  if(missing(sentence_prompt)){sentence_prompt <- b[starter.word.token()] # Accounts for no prompt being provided by generating a starter word (using starter.word.token() to generate a token and taking the corresponding b value)
   }
   
-  sentence_prompt <- unlist(strsplit(sentence_prompt, split = " "))
+  sentence_prompt <- unlist(strsplit(sentence_prompt, split = " ")) # If the sentence prompt is several words long, it is redefined as a vector split into its individual words
   
   repeat{
-    next_word <- next.word(sentence_prompt, M, M1, w=c(1000, 100, 10, 1))
-    if(next_word %in% punc_vec & sentence_prompt[length(sentence_prompt)] %in% punc_vec){
+    next_word <- next.word(sentence_prompt, M, M1, w=c(1000, 100, 10, 1)) # Runs next_word, to find the appropriate next word
+    if(next_word %in% punc_vec & sentence_prompt[length(sentence_prompt)] %in% punc_vec){ # Checks if the last and next word are both punctuation, if so the next word is discarded
     } else
-    {sentence_prompt <- append(sentence_prompt, next_word)}
+    {sentence_prompt <- append(sentence_prompt, next_word)} # The next word is added to the end of the sentence prompt vector
     
-    if(sentence_prompt[length(sentence_prompt)] == '.'){
-      break
+    if(sentence_prompt[length(sentence_prompt)] == '.'){ # Checks if the final value in the sentence prompt is a full stop
+      break # Ends the repeat as the sentence has ended
     }
   }
-  full_sentence <- paste(sentence_prompt, collapse = " ")
-  return(full_sentence)
+  full_sentence <- paste(sentence_prompt, collapse = " ") # Concatenates the vector of sentence words into a single string, separating the words with a space
+  return(full_sentence) # Prints the full sentence
 }
