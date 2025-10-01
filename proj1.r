@@ -80,62 +80,50 @@ a <- a[-direction_words] # Redefining the text to remove all directions based on
 
 a <- gsub('\\[_', '', a) # Removed the '[_' from the erroneously indicated direction (as found from the unclosed_bracket inspection)
 
-# b) Look for and remove cases where the entire word is uppercase (excluding 'I', 'O', and 'A')
+# b) Look for and remove cases where the entire word is uppercase (excluding 'I', 'O', and 'A' because these are words themselves)
+# Note: We recognised that this would remove cases of single letter words immediately preceded or followed by punctuation (ex. 'I,'), however the occurrence of these cases were not significant enough to impact the subsequent 'b' vector
 
-uppercase_indices <- which(a == toupper(a) & !(a %in% c('A', 'I', 'O')))
+uppercase_indices <- which(a == toupper(a) & !(a %in% c('A', 'I', 'O'))) 
 a <- a[-uppercase_indices]
 
 
-# c) Find and remove all words that contain a hyphen or an underscore 
+# c) Find and remove all cases of hyphens and underscores in each word in the text
+# Note: We explored the option of keeping hyphenated words as is, however, none of these words appeared in the vector 'b'
+# We chose to remove the hyphen rather than split into two words because we felt this kept the contextual integrity of the words in the text
 
-a_punc_hyph = grep("-", a, fixed = T )
-a_punc_under = grep("_", a, fixed = T )
+a <- gsub(pattern = '_|-', replacement = '', a) 
 
-# Remove all cases of hyphens and underscores in each word in the text
-a <- gsub(pattern = "[_-]", replacement = "", a)
+# d) Creates a function that will split all punctuation into their own entries
+# The inputs for this function are: text_vec, punc_vec
+# - text_vec: a vector containing the text strings from which punctuation will be split
+# - punc_vec: a vector containing all of the potential punctuation marks that may be attached to words in the text vector
+# The output for this function is: text_vec_split
+# - text_vec_split: text_vec with the occurrences of punctuation from punc_vec split into separate elements
 
-#### NOTE: Consider splitting hyphenated words into two separate words. May yield better predictive power and prompts
-
-#### 4D ####
-# Create function that will split all punctuation into their own entries
-
-split_punc <- function(text_vec, punc_vec){
-  # Correct the format of the punctuation vector to be used in the "grep" function
-  punc_vec <- paste(punc_vec, collapse = "|")
+split_punc <- function(text_vec, punc_vec) {
+  punc_vec <- paste(punc_vec, collapse = '|') # Corrects the format of the punctuation vector to be used in the "grep" function
   
-  # Find the indices of all words in the text vector that contain punctuation marks given in the punctuation vector
-  i_punc <- grep(punc_vec, text_vec)
+  i_punc <- grep(punc_vec, text_vec) # Locates all the indices of punctuation occurrences in the text vector
   
-  # Create a holding vector for the elements of the text vector separated from their corresponding punctuation, such that the length of this vector is the length of text + number of punc cases
-  # Note that this assumes that all words don't have two cases of punctuation in them. Sound assumption
-  text_vec_extra <- rep(0, length(i_punc) + length(text_vec))
+  text_vec_split <- rep(0, length(i_punc) + length(text_vec)) # The length of the new vector will be that of the current vector plus the number of punctuation occurrences
   
-  # Indices in the holding vector which can be used as a reference to put the separated punctuation as new elements
-  i_extra_elements <- i_punc + 1:length(i_punc) - 1
+  i_extra_elements <- i_punc + 1:length(i_punc) - 1 # Locations of the extra element from splitting the punctuation occurrences; these will be offset by 1 each time to account for the other punctuation having already been inserted ahead of it
   
-  # Take out the last character of words with punctuation using the "substr" function and put them in their corresponding element in the new text vector
-  # Note: This assumes that all punctuation marks appear at the end of words. Sound assumption for the text file we are working with
-  text_vec_extra[i_extra_elements + 1] <- substr(text_vec[i_punc], nchar(text_vec[i_punc]), nchar(text_vec[i_punc]))
+  text_vec_split[i_extra_elements + 1] <- substr(text_vec[i_punc], nchar(text_vec[i_punc]), nchar(text_vec[i_punc])) # Take out the last character of words containing punctuation using the "substr" function and put them in their corresponding element in the new text vector
   
-  # Create a copy of the text vector with all punctuation removed
   text_vec_no_punc <- gsub(pattern = punc_vec, replacement = "", text_vec)
   
-  # Puts the elements/words without punctuation in their corresponding position in the new word vector
-  text_vec_extra[-i_extra_elements - 1] <- text_vec_no_punc
+  text_vec_split[-i_extra_elements - 1] <- text_vec_no_punc
   
-  # Return the new text vector with punctuation separated from all elements and are now considered there own unique element in the text vector
-  return(text_vec_extra)
+  return(text_vec_split)
 }
 
-#### 4E ####
-# Implement the function to separate punctuation
 
+# e) Implement the split_punc vector defined above to separate punctuation in 'a'
 punc_vec <- c(",", "\\.", ";", "!", ":", "\\?")
-a <- split_punc(a, punc_vec)
+a <- split_punc(a, punc_vec) # 'a' is being passed as the text_vec and punc_vec is defined above
 
-#### 4F ####
-# Convert all the text lower case
-
+# f) Convert all the text lower case
 a <- tolower(a)
 
 #### 5A ####
@@ -180,9 +168,8 @@ for (i in 1:(length(a) - mlag)) {
 
 M1 <- token
 #key <-c() I think we dont need this command but need to test
-w = rep(1, ncol(M) - 1) # can be changed by the user
 
-next.word <- function(key ,M, M1, w) { 
+next.word <- function(key ,M, M1, w = rep(1, ncol(M) - 1)) { 
   if (length(key) < mlag) {
     key <- append(key, rep("", (mlag - length(key))), 0)
   }  # Ensures the key vector is at least as long as mlag before beginning - inserts blanks at the start of the vector if this is not already the case
