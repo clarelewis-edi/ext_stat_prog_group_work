@@ -1,34 +1,69 @@
-# Clare Lewis (s2879721), Grace  (s), Luke  (s)
+# Clare Lewis (s2879721), Grace Sheahan (s2898645), Luke Egan (s2837709)
 # brief description of each person's contribution and the % they did
 
-##setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work")
-#setwd("C:/Users/Grace Sheahan/Documents/Extended Statistical Programming/Assessment 1") ## Setting working directory to folder for Assessment 1
+# setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work")
+# setwd("C:/Users/Grace Sheahan/Documents/Extended Statistical Programming/Assessment 1") ## Setting working directory to folder for Assessment 1
 
-a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,fileEncoding="UTF-8") # Scanning the complete works of shakespear in under the name 'a'
+# --- Introduction ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ 
 
-#### 4A ####
-#### Look at the Shakespeare text ####
+# This project aims to produce a rudimentary 'small lanuage model', with which to simulate sentences written by Shakespeare.
+# The model has been fed a copy of the complete works of Shakespeare; which it uses to find and return a likely follow up to the latest word based on a prompt or random starting point.
+# In mathematical terms, the code uses a Markov model and randomly samples next words based on weighted probabilities of all potential follow ups.
+ 
+# The provided code includes steps taken to 'clean' the text until it is fit for purpose, and the prior definitions of several variables and functions which are later used in the final function.
+# The culmination of the code is a function 'generate.sentence()', which meets the objective of simulating a Shakespearean sentence, and does so with optional user prompts.
+ 
+# The complete works of Shakespeare used to build this model were taken from: https://www.gutenberg.org/cache/epub/100/pg100.txt
 
-# Remove stage directions (indicated by'[_' and '_]')
-open_direction <- grep('\\[_', a)  
-direction <- length(open_direction)
+# --- Section 1 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# We created a GitHub repository for our group project at the following location; https://github.com/clarelewis-edi/ext_stat_prog_group_work through whoch we could all collaborate on the project file
+
+# --- Section 2 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# The text file was saved from the provided location. A copy of this file was added to our repository.
+
+# --- Section 3 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# In this section we change the path to point our local repositories, and read in the text file under the name 'a'
+
+# setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work")
+# setwd("C:/Users/Grace Sheahan/Documents/Extended Statistical Programming/Assessment 1") 
+# setwd("C:/Users/Luke Egan/Desktop/Extended Statistical Programming")
+
+a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,fileEncoding="UTF-8") # The conditions limit to only Shakespeare's works in the file, cutting out unnecessary information
+
+# --- Section 4 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# In this section we complete the necessary pre-processing steps to clean and correctly format the text before building of the model could begin
+
+# a) Removing stage directions (indicated by'[_' and '_]')
+open_direction <- grep('\\[_', a)  # The locations of the start of each direction (indicated by '[_')
+direction <- length(open_direction) # Number of direction
 
 direction_length <- rep(0, direction) 
+# This loop finds the next close of direction corresponding to each opening and assigns the distance to this as the length of the direction i
 for (i in 1:direction) {
-  direction_length[i] <- grep('\\_]|\\.]', a[open_direction[i]:(open_direction[i] + 100)])[1]
+  direction_length[i] <- grep('\\_]|\\.]', a[open_direction[i]:(open_direction[i] + 100)])[1] # '.]' was also included in the search as there were a number of cases in which this is used instead of '_]'
 }
 
-unclosed_direction <- which(is.na(direction_length))
+unclosed_direction <- which(is.na(direction_length)) # Checking for any errors or missing data in direction_length
 
+# The unclosed direction vector, and subsequently the corresponding directions were examined manually to identify the issues
+# (The following lines are commented out to avoid printing of unnecessary information when running the full code)
 # unclosed_direction
 
 # a[open_direction[unclosed_direction[1]]:(open_direction[unclosed_direction[1]+20)]
 # a[open_direction[unclosed_direction[2]]:(open_direction[unclosed_direction[2]+20)]
-direction_length[unclosed_direction[2]] <- 10
 
+direction_length[unclosed_direction[2]] <- 10 # Found by manual inspection
+
+# The first input of unclosed_direction was found to be an error usage of '[_' and not actually a direction.
+# The input/value corresponding to this error is removed from open_direction, direction_length, and direction
 open_direction <- open_direction[-unclosed_direction[1]]
 direction_length <- direction_length[-unclosed_direction[1]]
 direction <- direction - 1
+
 
 close_direction <- rep(0, direction)  
 for (i in 1:direction) {
@@ -36,22 +71,22 @@ for (i in 1:direction) {
 }  
 
 direction_words <- rep(0, sum(direction_length)) 
-for (i in 1:direction) 
-  direction_words[(sum(direction_length[0:(i - 1)]) + 1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i])
+# This loop assigns the location of the close of the corresponding directions.
+for (i in 1:direction) {
+  direction_words[(sum(direction_length[0:(i - 1)]) + 1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i]) # The '-1' accounts for the fact that the length includes the open_location
 }
 
-a <- a[-direction_words]
+a <- a[-direction_words] # Redefining the text to remove all directions based on the locations of their words
 
-a <- gsub('\\[_', '', a)
+a <- gsub('\\[_', '', a) # Removed the '[_' from the erroneously indicated direction (as found from the unclosed_bracket inspection)
 
-#### 4B ####
-# Look for and remove cases where the entire word is uppercase (excluding 'I', 'O', and 'A')
+# b) Look for and remove cases where the entire word is uppercase (excluding 'I', 'O', and 'A')
 
 uppercase_indices <- which(a == toupper(a) & !(a %in% c('A', 'I', 'O')))
 a <- a[-uppercase_indices]
 
-#### 4C ####
-# Find and remove all words that contain a hyphen or an underscore 
+
+# c) Find and remove all words that contain a hyphen or an underscore 
 
 a_punc_hyph = grep("-", a, fixed = T )
 a_punc_under = grep("_", a, fixed = T )
