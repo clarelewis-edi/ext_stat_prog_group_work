@@ -8,7 +8,7 @@
 
 # --- Introduction ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ 
 
-# This project aims to produce a rudimentary 'small lanuage model', with which to simulate sentences written by Shakespeare.
+# This project aims to produce a rudimentary 'small language model', with which to simulate sentences written by Shakespeare.
 # The model has been fed a copy of the complete works of Shakespeare; which it uses to find and return a likely follow up to the latest word based on a prompt or random starting point.
 # In mathematical terms, the code uses a Markov model and randomly samples next words based on weighted probabilities of all potential follow ups.
  
@@ -19,7 +19,7 @@
 
 # --- Section 1 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# We created a GitHub repository for our group project at the following location; https://github.com/clarelewis-edi/ext_stat_prog_group_work through whoch we could all collaborate on the project file
+# We created a GitHub repository for our group project at the following location; https://github.com/clarelewis-edi/ext_stat_prog_group_work through which we could all collaborate on the project file
 
 # --- Section 2 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -27,7 +27,7 @@
 
 # --- Section 3 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# In this section we change the path to point our local repositories, and read in the text file under the name 'a'
+# Change the path to point our local repositories, and read in the text file under the name 'a'
 
 # setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work")
 # setwd("C:/Users/Grace Sheahan/Documents/Extended Statistical Programming/Assessment 1") 
@@ -37,11 +37,11 @@ a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,fileEncodi
 
 # --- Section 4 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# In this section we complete the necessary pre-processing steps to clean and correctly format the text before building of the model could begin
+# Complete the necessary pre-processing steps to clean and correctly format the text before building of the model could begin
 
-# a) Removing stage directions (indicated by'[_' and '_]')
+# a) Remove stage directions (indicated by'[_' and '_]')
 open_direction <- grep('\\[_', a)  # The locations of the start of each direction (indicated by '[_')
-direction <- length(open_direction) # Number of direction
+direction <- length(open_direction) # Number of directions
 
 direction_length <- rep(0, direction) 
 # This loop finds the next close of direction corresponding to each opening and assigns the distance to this as the length of the direction i
@@ -49,7 +49,7 @@ for (i in 1:direction) {
   direction_length[i] <- grep('\\_]|\\.]', a[open_direction[i]:(open_direction[i] + 100)])[1] # '.]' was also included in the search as there were a number of cases in which this is used instead of '_]'
 }
 
-unclosed_direction <- which(is.na(direction_length)) # Checking for any errors or missing data in direction_length
+unclosed_direction <- which(is.na(direction_length)) # Check for any errors or missing data in direction_length
 
 # The unclosed direction vector, and subsequently the corresponding directions were examined manually to identify the issues
 # (The following lines are commented out to avoid printing of unnecessary information when running the full code)
@@ -78,12 +78,12 @@ for (i in 1:direction) {
   direction_words[(sum(direction_length[0:(i - 1)]) + 1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i]) # The '-1' accounts for the fact that the length includes the open_location
 }
 
-a <- a[-direction_words] # Redefining the text to remove all directions based on the locations of their words
+a <- a[-direction_words] # Redefine the text to remove all directions based on the locations of their words
 
-a <- gsub('\\[_', '', a) # Removed the '[_' from the erroneously indicated direction (as found from the unclosed_bracket inspection)
+a <- gsub('\\[_', '', a) # Remove the '[_' from the erroneously indicated direction (as found from the unclosed_bracket inspection)
 
 # b) Look for and remove cases where the entire word is uppercase (excluding 'I', 'O', and 'A' because these are words themselves)
-# Note: We recognised that this would remove cases of single letter words immediately preceded or followed by punctuation (ex. 'I,'), however the occurrence of these cases were not significant enough to impact the subsequent 'b' vector
+# Note: This will remove cases of single letter words immediately preceded or followed by punctuation (ex. 'I,'), however the occurrence of these cases were not significant enough to impact the subsequent 'b' vector
 
 uppercase_indices <- which(a == toupper(a) & !(a %in% c('A', 'I', 'O'))) 
 a <- a[-uppercase_indices]
@@ -91,11 +91,11 @@ a <- a[-uppercase_indices]
 
 # c) Find and remove all cases of hyphens and underscores in each word in the text
 # Note: We explored the option of keeping hyphenated words as is, however, none of these words appeared in the vector 'b'
-# We chose to remove the hyphen rather than split into two words because we felt this kept the contextual integrity of the words in the text
+# Note: We chose to remove the hyphen rather than split into two words because we felt this kept the contextual integrity of the words in the text
 
 a <- gsub(pattern = '_|-', replacement = '', a) 
 
-# d) Creates a function that will split all punctuation into their own entries
+# d) Create a function that will split all punctuation into their own entries
 # The inputs for this function: text_vec, punc_vec
 # - text_vec: a vector containing the text strings from which punctuation will be split
 # - punc_vec: a vector containing all of the potential punctuation marks that may be attached to words in the text vector
@@ -103,9 +103,9 @@ a <- gsub(pattern = '_|-', replacement = '', a)
 # - text_vec_split: text_vec with the occurrences of punctuation from punc_vec split into separate elements
 
 split_punc <- function(text_vec, punc_vec) {
-  punc_vec <- paste(punc_vec, collapse = '|') # Corrects the format of the punctuation vector to be used in the "grep" function
+  punc_vec <- paste(punc_vec, collapse = '|') # Correct the format of the punctuation vector to be used in the "grep" function
   
-  i_punc <- grep(punc_vec, text_vec) # Locates all the indices of punctuation occurrences in the text vector
+  i_punc <- grep(punc_vec, text_vec) # Locate all the indices of punctuation occurrences in the text vector
   
   text_vec_split <- rep(0, length(i_punc) + length(text_vec)) # The length of the new vector will be that of the current vector plus the number of punctuation occurrences
   
@@ -125,23 +125,25 @@ split_punc <- function(text_vec, punc_vec) {
 punc_vec <- c(",", "\\.", ";", "!", ":", "\\?")
 a <- split_punc(a, punc_vec) # 'a' is being passed as the text_vec and punc_vec is defined above
 
-# f) Convert all the text lower case
-a <- tolower(a)
+# f) 
+a <- tolower(a) # Convert all the text lower case
 
 # --- Section 5 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# a) Created a vector of unique words in the text
+#### questionably all the comments in 5 can be removed
+
+# a) Create a vector of unique words in the text
 
 words <- unique(a)
 
-# b) Indicates which location in the words vector each word in the full text corresponds to
+# b) Indicate which location in the words vector each word in the full text corresponds to
 
 index <- match(a, words)
 
-# c) Counts the occurrences of each word
+# c) Count the occurrences of each word
 
 word_occurences <- tabulate(index)
 
-# d) Creates a vector of the 1000 most common words by using a for loop and rank to locate and order these words
+# d) Create a vector of the 1000 most common words by using a for loop and rank to locate and order these words
 
 b <- rep(0, 1000)
 for (i in 1:1000) {
@@ -195,10 +197,10 @@ next.word <- function(key, M, M1, w = rep(1, ncol(M) - 1)) {
     full_matches <- which(is.finite(ii) & ii == 0) # Returns the indices of the rows for which there is no NAs (is.finite()) and there is an exact match (== 0) 
     
     next_word_tokens <- na.omit(M[full_matches, mlag + 1]) # Creates a vector of the tokens for all the words which are preceded by an exact match 
-    weights <- append(weights, rep(w[i],length(next_word_tokens)))
+    weights <- append(weights, rep(w[i]/length(next_word_tokens),length(next_word_tokens)))
     next_token <- append(next_token, next_word_tokens)
   }
-  
+
   if (length(next_token) == 0) {
     next_word <- b[sample(na.omit(M1), 1)]
     # Checks if there are tokens in nwt; if this is the case we will sample from one of these as these are the best match
@@ -263,7 +265,7 @@ generate.sentence <- function(sentence_prompt) { # Defining a generate sentence 
   sentence_prompt <- unlist(strsplit(sentence_prompt, split = " ")) # If the sentence prompt is several words long, it is redefined as a vector split into its individual words
   
   repeat{
-    next_word <- next.word(sentence_prompt, M, M1, w=c(1000, 100, 10, 1)) # Runs next_word, to find the appropriate next word
+    next_word <- next.word(sentence_prompt, M, M1, w = rep(1, ncol(M) - 1)) # Runs next_word, to find the appropriate next word
     if (next_word %in% punc_vec & sentence_prompt[length(sentence_prompt)] %in% punc_vec) { # Checks if the last and next word are both punctuation, if so the next word is discarded
     } 
     
@@ -280,4 +282,7 @@ generate.sentence <- function(sentence_prompt) { # Defining a generate sentence 
   return(full_sentence) # Prints the full sentence
 }
 
-
+generate.sentence()
+generate.sentence('Blood')
+generate.sentence('Simon')
+generate.sentence('Today I went')
