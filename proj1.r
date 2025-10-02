@@ -39,17 +39,18 @@ a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,fileEncodi
 
 # Complete the necessary pre-processing steps to clean and correctly format the text before building of the model could begin
 
-# a) Remove stage directions (indicated by'[_' and '_]')
-open_direction <- grep('\\[_', a)  # The locations of the start of each direction (indicated by '[_')
-direction <- length(open_direction) # Number of directions
+
+# a) Removing stage directions (indicated by'[' and ']')
+open_direction <- grep('\\[', a)  # The locations of the start of each direction (indicated by '[')
+direction <- length(open_direction) # Number of direction
 
 direction_length <- rep(0, direction) 
 # This loop finds the next close of direction corresponding to each opening and assigns the distance to this as the length of the direction i
 for (i in 1:direction) {
-  direction_length[i] <- grep('\\_]|\\.]', a[open_direction[i]:(open_direction[i] + 100)])[1] # '.]' was also included in the search as there were a number of cases in which this is used instead of '_]'
+  direction_length[i] <- grep('\\]', a[open_direction[i]:(open_direction[i] + 100)])[1] # The end of the direction is identified as the next occurence of ']'
 }
 
-unclosed_direction <- which(is.na(direction_length)) # Check for any errors or missing data in direction_length
+unclosed_direction <- which(is.na(direction_length)) # Checking for any errors or missing data in direction_length
 
 # The unclosed direction vector, and subsequently the corresponding directions were examined manually to identify the issues
 # (The following lines are commented out to avoid printing of unnecessary information when running the full code)
@@ -58,12 +59,12 @@ unclosed_direction <- which(is.na(direction_length)) # Check for any errors or m
 # a[open_direction[unclosed_direction[1]]:(open_direction[unclosed_direction[1]+20)]
 # a[open_direction[unclosed_direction[2]]:(open_direction[unclosed_direction[2]+20)]
 
-direction_length[unclosed_direction[2]] <- 10 # Found by manual inspection
+direction_length[unclosed_direction[1]] <- 15 # Found by manual inspection
 
-# The first input of unclosed_direction was found to be an error usage of '[_' and not actually a direction.
+# The second input of unclosed_direction was found to be an error usage of '[_' and not actually a direction.
 # The input/value corresponding to this error is removed from open_direction, direction_length, and direction
-open_direction <- open_direction[-unclosed_direction[1]]
-direction_length <- direction_length[-unclosed_direction[1]]
+open_direction <- open_direction[-unclosed_direction[2]]
+direction_length <- direction_length[-unclosed_direction[2]]
 direction <- direction - 1
 
 
@@ -78,9 +79,9 @@ for (i in 1:direction) {
   direction_words[(sum(direction_length[0:(i - 1)]) + 1):(sum(direction_length[0:i]))] <- (open_direction[i]:close_direction[i]) # The '-1' accounts for the fact that the length includes the open_location
 }
 
-a <- a[-direction_words] # Redefine the text to remove all directions based on the locations of their words
+a <- a[-direction_words] # Redefining the text to remove all directions based on the locations of their words
 
-a <- gsub('\\[_', '', a) # Remove the '[_' from the erroneously indicated direction (as found from the unclosed_bracket inspection)
+a <- gsub('\\[_', '', a) # Removed the '[_' from the erroneously indicated direction (as found from the unclosed_bracket inspection)
 
 # b) Look for and remove cases where the entire word is uppercase (excluding 'I', 'O', and 'A' because these are words themselves)
 # Note: This will remove cases of single letter words immediately preceded or followed by punctuation (ex. 'I,'), however the occurrence of these cases were not significant enough to impact the subsequent 'b' vector
