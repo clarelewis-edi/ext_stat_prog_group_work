@@ -1,5 +1,7 @@
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
 # Clare Lewis (s2879721), Grace Sheahan (s2898645), Luke Egan (s2837709)
 # brief description of each person's contribution and the % they did
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
 
 # setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work")
 # setwd("C:/Users/Grace Sheahan/Documents/Extended Statistical Programming/Assessment 1") ## Setting working directory to folder for Assessment 1
@@ -94,10 +96,10 @@ a <- a[-uppercase_indices]
 a <- gsub(pattern = '_|-', replacement = '', a) 
 
 # d) Creates a function that will split all punctuation into their own entries
-# The inputs for this function are: text_vec, punc_vec
+# The inputs for this function: text_vec, punc_vec
 # - text_vec: a vector containing the text strings from which punctuation will be split
 # - punc_vec: a vector containing all of the potential punctuation marks that may be attached to words in the text vector
-# The output for this function is: text_vec_split
+# The output for this function: text_vec_split
 # - text_vec_split: text_vec with the occurrences of punctuation from punc_vec split into separate elements
 
 split_punc <- function(text_vec, punc_vec) {
@@ -126,50 +128,58 @@ a <- split_punc(a, punc_vec) # 'a' is being passed as the text_vec and punc_vec 
 # f) Convert all the text lower case
 a <- tolower(a)
 
-#### 5A ####
-#Created a vector of unique words in the text
+# --- Section 5 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# a) Created a vector of unique words in the text
 
 words <- unique(a)
 
-#### 5B ####
-# Indicates which location in the words vector each word in the full text corresponds to
+# b) Indicates which location in the words vector each word in the full text corresponds to
 
 index <- match(a, words)
 
-#### 5C ####
-# Counts the occurrences of each word
+# c) Counts the occurrences of each word
 
 word_occurences <- tabulate(index)
 
-#### 5D ####
-# Creates a vector of the 1000 most common words by using a for loop and rank to locate and order these words
+# d) Creates a vector of the 1000 most common words by using a for loop and rank to locate and order these words
 
 b <- rep(0, 1000)
 for (i in 1:1000) {
   b[i] <- words[which((rank(word_occurences, ties.method = "first")) == (length(word_occurences) + 1 - i))]
 }
 
-#### 6A ####
+# --- Section 6 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#### is mlag just to define the longest text string that our functions will look at?
+# mlag is a value that will determine the width of the matrix M, mlag can be any non-zero number, for this exercise we assigned it the value of 4, but that value can be changed
+############### changing mlag produces an error
+mlag <- 4 # This value can be changed by the user to change the output results of the model
+M1 <- match(a,b) # M1 is a vector of length 'a' with token values representing the index of 'b' where that given word shows up, NA values exist everywhere that a word in 'a' does not exist in 'b'
 
-mlag <- 4 # this value can be changed by the user to change the output results of the model
-token <- match(a,b)
-
-#### 6B ####
+# b) Create a matrix M that has dimensions a-mlag*mlag+1
 
 M <- matrix(NA, length(a) - mlag, mlag + 1)
+
+# Insert values into M such that row 1 contains values M1[1:mlag+1], row 2 contains M1[2:mlag+2], row 3 contains M1[3:mlag+3] etc.
 for (i in 1:(length(a) - mlag)) {
   for (j in 1:(mlag + 1)) {
-    M[i,j] <- token[i + j - 1]
+    M[i,j] <- M1[i + j - 1]
   }
 }
 
 
-#### 7 #####
+# --- Section 7 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-M1 <- token
-#key <-c() I think we dont need this command but need to test
+# The inputs for this function: key, M, M1, w
+# - key:
+# - M:
+# - M1:
+# - w:
+# The output for this function: next_word
+# - next_word
 
-next.word <- function(key ,M, M1, w = rep(1, ncol(M) - 1)) { 
+#key <- c()
+############### changing mlag produces an error in next.word, also running just next.word gives an error if key is not defined (cant remember how it's supposed to handle this)
+next.word <- function(key, M, M1, w = rep(1, ncol(M) - 1)) { 
   if (length(key) < mlag) {
     key <- append(key, rep("", (mlag - length(key))), 0)
   }  # Ensures the key vector is at least as long as mlag before beginning - inserts blanks at the start of the vector if this is not already the case
@@ -202,7 +212,13 @@ next.word <- function(key ,M, M1, w = rep(1, ncol(M) - 1)) {
   }
 }
 
-#### 8 ####
+# --- Section 8 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+########## since we skip this function as long as there's not a missing value do we want to keep the print statements?
+
+# The inputs for this function: start_word
+# - start_word:
+# The output for this function: start_token
+# - next_word:
 
 starter.word.token <- function(start_word) { ###Defining a starter word token function
   punc_vec <- append(punc_vec, c('?', '.'))
@@ -229,7 +245,12 @@ starter.word.token <- function(start_word) { ###Defining a starter word token fu
   return(start_token)
 }
 
-#### 9 ####
+# --- Section 9 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# The inputs for this function: sentence_prompt
+# - sentence_prompt:
+# The output for this function: full_sentence
+# - full_sentence:
 
 #punc_tokens <- na.omit(b[punc_vec]) do we need this line?
 
@@ -258,3 +279,5 @@ generate.sentence <- function(sentence_prompt) { # Defining a generate sentence 
   full_sentence <- paste(sentence_prompt, collapse = " ") # Concatenates the vector of sentence words into a single string, separating the words with a space
   return(full_sentence) # Prints the full sentence
 }
+
+
