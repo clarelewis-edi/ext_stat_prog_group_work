@@ -1,8 +1,11 @@
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
 # Clare Lewis (s2879721), Grace Sheahan (s2898645), Luke Egan (s2837709)
-# Clare: Completed pre-processing steps 4b and 6, we all collaborated on the later sections, working in person together but I lead the code writing for section 7
-# Grace: Completed pre-processing steps 4a and 5, we all collaborated on the later sections, working in person together but I lead the code writing for section 9
-# Luke: Completed pre-processing steps 4c-4f, we all collaborated on the later sections, working in person together but I lead the code writing for section 8
+
+# Clare: Completed pre-processing steps 4b and 6, we all collaborated on the later sections, working in-person together but I lead the code writing for section 7
+# Grace: Completed pre-processing steps 4a and 5, we all collaborated on the later sections, working in-person together but I lead the code writing for section 9
+# Luke: Completed pre-processing steps 4c-4f, we all collaborated on the later sections, working in-person together but I lead the code writing for section 8
+
+# We all feel that we equally contributed to this project, through a mixture of independent coding and in-person collaboration, roughly completing 1/3 of the work each
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
 
 # Setting working directory to folder for Assessment 1
