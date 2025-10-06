@@ -5,13 +5,13 @@
 # Grace: 
 # Luke: 
 
-# 
+################################################################################ Comments should not be longer than this line of ##
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
 
 # Setting working directory to folder for Assessment 1
-# setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work")
-# setwd("C:/Users/Grace Sheahan/Documents/Extended Statistical Programming/Assessment 1")
-# setwd("C:/Users/Luke Egan/Desktop/Extended Statistical Programming")
+# setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work/Proj 2")
+# setwd("C:/Users/Grace Sheahan/Documents/Extended Statistical Programming/ext_stat_prog_group_work/Proj 2")
+# setwd("C:/Users/Luke Egan/Desktop/Extended Statistical Programming/ext_stat_prog_group_work/Proj 2")
 
 #-------------------------------------------------------------------------------
 ### Background provided info
