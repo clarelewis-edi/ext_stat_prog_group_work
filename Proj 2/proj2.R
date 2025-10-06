@@ -86,6 +86,22 @@ h <- sample(rep(1:n, sample(1:hmax, n, replace = TRUE))[1:n])
 # the model properly so that you do not CREATE any links twice (links need to be RECORDED twice, however)
 ################## 
 
+get.net <- function(beta, nc = 1){
+  holding_matrix = matrix(0, nrow = length(beta), ncol = length(beta))
+  prob_matrix = nc/(mean(beta)*(n-1))*(beta%*%t(beta))
+  
+  upper_tri_probs = prob_matrix[upper.tri(prob_matrix)]
+  link_vec = rbinom(length(upper_tri_probs), size = 1, prob = upper_tri_probs)
+  
+  holding_matrix[upper.tri(holding_matrix)] = link_vec
+  holding_matrix = holding_matrix + t(holding_matrix)
+  diag(holding_matrix) = 0
+  
+  net_list = as.list(as.data.frame(holding_matrix))
+  return(net_list)
+  
+}
+
 
 ################## 
 # 3: Write the function:
