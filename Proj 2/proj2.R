@@ -73,6 +73,12 @@
 # h can be created with one line of code by careful use of rep and sample. Use hmax = 5 by default
 ################## 
 
+set.seed(17)
+
+hmax <- 5
+n <- 1000
+
+h <- sample(rep(1:n, sample(1:hmax, n, replace = TRUE))[1:n])
 
 ################## 
 # 2: Write function get.net(beta,nc=15) where beta is the n vector of Bi value for each person. The function should return a list,
