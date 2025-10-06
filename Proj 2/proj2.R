@@ -114,6 +114,61 @@ get.net <- function(beta, nc = 1){
 # especially with careful use of expressions like x[ind1][ind2] <- y in places (assignment to a subvector of a subvector)
 ################## 
 
+nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005){
+  ## SEIR stochastic simulation model (S,E,I,R are states 0,1,2,3)
+  # b, h, alink as defined above
+  # alpha = vector of transmition probabilities by relationship
+  # delta = probability of moving from I to R
+  # gamma = probability of moving from E to I
+  # nc = average number of contacts per person
+  # nt = number of days to simulate
+  # proportion of the initial population to randomly start in the I state.
+  
+  x <- rep(0, n)  # initialise state vector - setting all of pop to S (state 0)
+  u <- runif(1000) # uniform random deviates
+  # move initial infectees to I (p = 0.005)
+  x[x==0 & u < pinf*n] <- 2 # Redefines intial state to I (state 2) based on pinf
+  
+  S <- E <- I <- R <- rep(0, nt)  # Defining vectors that will contain the pop in the states on each day
+  S[1] <- sum(x == 0) # Initial suseptible population is all non-infected people
+  I[1] <- sum(x == 2) # Initial infected population
+  
+  for (i in (2:nt)) { # Looping through each day which is being modelled
+    v <- runif(1000) # uniform random deviates
+    x[x == 2 & v < delta] <- 3 # Those in I progressed to R with probability delta
+    x[x == 1 & v < gamma] <- 2 # Those in E progressed to I with probability gamma
+    
+# The probability of progressing from S to E depends on connection, the transition requires a for loop
+    for (i in which(x==0)){ # Interested in those currently in state S
+      
+      household <- which(h == h[i]) # Checking household connection
+      xh <- rep(0, n)
+      xh[household] <- x[household] # Assigning xh as the x vector only for those in person i's household
+      xh[xh == 2 &  v < alpha[1]] <- 1 # Those in S progressed to E with probability alpha[1] if a household member is infected
+      
+      network <- which(get.net(beta, nc)[[i]] == 1) # Checking network connections
+      xn <- rep(0, n)
+      xn[network] <- x[network] # Assigning xn as the x vector only for those in person i's network
+      xn[i] <- x[i]
+      xn[xn == 2 &  v < alpha[2]] <- 1 # Those in S progressed to E with probability alpha[2] if a household member is infected
+      
+      other <- c(1:n)[-c(household,network)] # Checking the wider public
+      xo <- rep(0,n)
+      xo[other] <- x[other] # Assigning xn as the x vector only for those not in person i's household or network
+      xo[i] = x[i]
+      xo[xo == 2 &  v < alpha[3]] <- 1 # Those in S progressed to E with probability alpha[3] if a wider public member is infected
+      
+      x[i] <- max(xh[i] == 1 |xn[i] == 1 |xo[i] == 1) # We are only interested in person i in each iteration as the household and network are unique to each person
+    }
+    
+    S[t] <- sum(x == 0)
+    E[t] <- sum(x == 1)
+    I[t] <- sum(x == 2)
+    R[t] <- sum(x == 3)
+  }
+  
+  list(S, E, I, R, t)
+}
 
 ################## 
 # 4: Write a function to nicely plot the dynamics of the simulated population states as returned by nseir (a better version of the plots in 6.2 in the notes)
