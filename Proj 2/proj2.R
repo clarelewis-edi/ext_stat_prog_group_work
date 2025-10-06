@@ -119,6 +119,18 @@ get.net <- function(beta, nc = 1){
 # 4: Write a function to nicely plot the dynamics of the simulated population states as returned by nseir (a better version of the plots in 6.2 in the notes)
 ################## 
 
+plot.output <- function() {
+  par(mfcol=c(1,4),mar=c(4,4,1,1)) # set plot window up for multiple plots
+  
+  # potentially set up a loop to go through each epi or just have one 
+  epi <- seir()
+  # Prettier?
+  plot(epi$S,type="l",lwd=2,ylim=c(0,max(epi$S)),xlab="day",ylab="N") ## S black
+  points(epi$E,type="l",lwd=2,col=4);points(epi$I,type="l",lwd=2,col=2) ## E (blue) and I (red)
+  # his plots
+  plot(epi$S,ylim=c(0,max(epi$S)),xlab="day",ylab="N") ## S black
+  points(epi$E,col=4);points(epi$I,col=2) ## E (blue) and I (red)
+}
 
 ################## 
 # 5: Setting beta to a vector of U(0,1) random variables, use the model to compare 4 scenarios and plot them next to each other (suitably labelled).
@@ -129,6 +141,11 @@ get.net <- function(beta, nc = 1){
 # Fourth: combine the previous two scenarios (constant beta, random mixing)
 # Comment on the apparent effect of the household and network structure relative to random mixing
 ################## 
+
+plot.output() #run 1: default params
+plot.output() #run 2: remove household and regular network structure, while keeping the average initial number of infectious contacts per day the same for each person by setting ah=ac=0 and ar=0.04
+plot.output() #run 3: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
+plot.output() #run 4: combine the previous two scenarios (constant beta, random mixing)
 
 
 ########### code given in section 6.2 that is referenced in the assignment instructions
