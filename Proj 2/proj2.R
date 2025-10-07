@@ -124,41 +124,51 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
   # nt = number of days to simulate
   # proportion of the initial population to randomly start in the I state.
   
+  t <- 1:nt
   x <- rep(0, n)  # initialise state vector - setting all of pop to S (state 0)
-  u <- runif(1000) # uniform random deviates
+  u <- runif(n) # uniform random deviates
   # move initial infectees to I (p = 0.005)
   x[x==0 & u < pinf*n] <- 2 # Redefines intial state to I (state 2) based on pinf
+  n = length(beta)
+  
+  beta_bar <- sum(beta)/n
+  daily_constant <- alpha[3]*nc/(beta_bar^2*(n-1))
   
   S <- E <- I <- R <- rep(0, nt)  # Defining vectors that will contain the pop in the states on each day
   S[1] <- sum(x == 0) # Initial suseptible population is all non-infected people
   I[1] <- sum(x == 2) # Initial infected population
   
-  for (i in (2:nt)) { # Looping through each day which is being modelled
-    v <- runif(1000) # uniform random deviates
-    x[x == 2 & v < delta] <- 3 # Those in I progressed to R with probability delta
-    x[x == 1 & v < gamma] <- 2 # Those in E progressed to I with probability gamma
+  for (i in t[2:nt]) {
+    v <- runif(1000)
+    x[x == 2 & v < delta] <- 3
+    x[x == 1 & v < gamma] <- 2
     
-# The probability of progressing from S to E depends on connection, the transition requires a for loop
-    for (i in which(x==0)){ # Interested in those currently in state S
-      
-      household <- which(h == h[i]) # Checking household connection
+    for (i in which(x==0)){
+      household <- which(h == h[i])
       xh <- rep(0, n)
-      xh[household] <- x[household] # Assigning xh as the x vector only for those in person i's household
-      xh[xh == 2 &  v < alpha[1]] <- 1 # Those in S progressed to E with probability alpha[1] if a household member is infected
+      xh[household] <- x[household]
+      xh[xh == 0 &  v < alpha[1]] <- 1
       
-      network <- which(get.net(beta, nc)[[i]] == 1) # Checking network connections
+      network <- which(get.net(beta, nc)[[i]] == 1)
       xn <- rep(0, n)
-      xn[network] <- x[network] # Assigning xn as the x vector only for those in person i's network
+      xn[network] <- x[network]
       xn[i] <- x[i]
-      xn[xn == 2 &  v < alpha[2]] <- 1 # Those in S progressed to E with probability alpha[2] if a household member is infected
+      xn[xn == 0 &  v < alpha[2]] <- 1
       
-      other <- c(1:n)[-c(household,network)] # Checking the wider public
+      
+      other <- c(1:n)[-c(household,network)]
       xo <- rep(0,n)
-      xo[other] <- x[other] # Assigning xn as the x vector only for those not in person i's household or network
+      xo[other] <- x[other]
       xo[i] = x[i]
-      xo[xo == 2 &  v < alpha[3]] <- 1 # Those in S progressed to E with probability alpha[3] if a wider public member is infected
       
-      x[i] <- max(xh[i] == 1 |xn[i] == 1 |xo[i] == 1) # We are only interested in person i in each iteration as the household and network are unique to each person
+      alpha_daily <- daily_constant*beta[i]*beta
+      
+      #for j in other:
+      # alpha_daily[j] <- daily_constant*beta[i]*beta[j]
+      
+      xo[xo == 0 &  v < alpha_daily] <- 1
+      
+      x[i] <- max(xh[i] == 1 |xn[i] == 1 |xo[i] == 1)
     }
     
     S[t] <- sum(x == 0)
@@ -167,7 +177,7 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
     R[t] <- sum(x == 3)
   }
   
-  list(S, E, I, R, t)
+  list(S=S, E=E, I=I, R=R, t=t)
 }
 
 ################## 
@@ -178,7 +188,7 @@ plot.output <- function() {
   par(mfcol=c(1,4),mar=c(4,4,1,1)) # set plot window up for multiple plots
   
   # potentially set up a loop to go through each epi or just have one 
-  epi <- seir()
+  epi <- nseir()
   # Prettier?
   plot(epi$S,type="l",lwd=2,ylim=c(0,max(epi$S)),xlab="day",ylab="N") ## S black
   points(epi$E,type="l",lwd=2,col=4);points(epi$I,type="l",lwd=2,col=2) ## E (blue) and I (red)
@@ -204,29 +214,29 @@ plot.output() #run 4: combine the previous two scenarios (constant beta, random 
 
 
 ########### code given in section 6.2 that is referenced in the assignment instructions
-seir <- function(n=10000,ni=10,nt=100,gamma=1/3,delta=1/5,bmu=5e-5,bsc=1e-5) {
-  ## SEIR stochastic simulation model.
-  ## n = population size; ni = initially infective; nt = number of days
-  ## gamma = daily prob E -> I; delta = daily prob I -> R;
-  ## bmu = mean beta; bsc = var(beta) = bmu * bsc
-  x <- rep(0,n) ## initialize to susceptible state
-  beta <- rgamma(n,shape=bmu/bsc,scale=bsc) ## individual infection rates
-  x[1:ni] <- 2 ## create some infectives
-  S <- E <- I <- R <- rep(0,nt) ## set up storage for pop in each state
-  S[1] <- n-ni;I[1] <- ni ## initialize
-  for (i in 2:nt) { ## loop over days
-    u <- runif(n) ## uniform random deviates
-    x[x==2&u<delta] <- 3 ## I -> R with prob delta
-    x[x==1&u<gamma] <- 2 ## E -> I with prob gamma
-    x[x==0&u<beta*I[i-1]] <- 1 ## S -> E with prob beta*I[i-1]
-    S[i] <- sum(x==0); E[i] <- sum(x==1)
-    I[i] <- sum(x==2); R[i] <- sum(x==3)
-  }
-  list(S=S,E=E,I=I,R=R,beta=beta)
-} ## seir
-
-par(mfcol=c(2,3),mar=c(4,4,1,1)) ## set plot window up for multiple plots
-epi <- seir(bmu=7e-5,bsc=1e-7) ## run simulation
-hist(epi$beta,xlab="beta",main="") ## beta distribution
-plot(epi$S,ylim=c(0,max(epi$S)),xlab="day",ylab="N") ## S black
-points(epi$E,col=4);points(epi$I,col=2) ## E (blue) and I (red)
+# seir <- function(n=10000,ni=10,nt=100,gamma=1/3,delta=1/5,bmu=5e-5,bsc=1e-5) {
+#   ## SEIR stochastic simulation model.
+#   ## n = population size; ni = initially infective; nt = number of days
+#   ## gamma = daily prob E -> I; delta = daily prob I -> R;
+#   ## bmu = mean beta; bsc = var(beta) = bmu * bsc
+#   x <- rep(0,n) ## initialize to susceptible state
+#   beta <- rgamma(n,shape=bmu/bsc,scale=bsc) ## individual infection rates
+#   x[1:ni] <- 2 ## create some infectives
+#   S <- E <- I <- R <- rep(0,nt) ## set up storage for pop in each state
+#   S[1] <- n-ni;I[1] <- ni ## initialize
+#   for (i in 2:nt) { ## loop over days
+#     u <- runif(n) ## uniform random deviates
+#     x[x==2&u<delta] <- 3 ## I -> R with prob delta
+#     x[x==1&u<gamma] <- 2 ## E -> I with prob gamma
+#     x[x==0&u<beta*I[i-1]] <- 1 ## S -> E with prob beta*I[i-1]
+#     S[i] <- sum(x==0); E[i] <- sum(x==1)
+#     I[i] <- sum(x==2); R[i] <- sum(x==3)
+#   }
+#   list(S=S,E=E,I=I,R=R,beta=beta)
+# } ## seir
+# 
+# par(mfcol=c(2,3),mar=c(4,4,1,1)) ## set plot window up for multiple plots
+# epi <- seir(bmu=7e-5,bsc=1e-7) ## run simulation
+# hist(epi$beta,xlab="beta",main="") ## beta distribution
+# plot(epi$S,ylim=c(0,max(epi$S)),xlab="day",ylab="N") ## S black
+# points(epi$E,col=4);points(epi$I,col=2) ## E (blue) and I (red)
