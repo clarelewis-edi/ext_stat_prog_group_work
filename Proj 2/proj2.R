@@ -124,12 +124,12 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
   # nt = number of days to simulate
   # proportion of the initial population to randomly start in the I state.
   
-  t <- 1:nt
-  x <- rep(0, n)  # initialise state vector - setting all of pop to S (state 0)
-  u <- runif(n) # uniform random deviates
-  # move initial infectees to I (p = 0.005)
-  x[x==0 & u < pinf*n] <- 2 # Redefines intial state to I (state 2) based on pinf
   n = length(beta)
+  t = 1:nt
+  
+  initial_state <- c(0,2) # To start members of pop are only either suseptible or infected
+  initial_prob <- c(1-pinf, pinf)
+  x <- sample(initial_state, replace = TRUE, size = n, prob = initial_prob) # Randomly assigns initial states based on pinf
   
   beta_bar <- sum(beta)/n
   daily_constant <- alpha[3]*nc/(beta_bar^2*(n-1))
@@ -138,43 +138,48 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
   S[1] <- sum(x == 0) # Initial suseptible population is all non-infected people
   I[1] <- sum(x == 2) # Initial infected population
   
-  for (i in t[2:nt]) {
-    v <- runif(1000)
-    x[x == 2 & v < delta] <- 3
-    x[x == 1 & v < gamma] <- 2
+  for (i in 2:nt {
+    u <- runif(1000)
+    prev_infectious <- which(x == 2)
     
-    for (i in which(x==0)){
-      household <- which(h == h[i])
-      xh <- rep(0, n)
-      xh[household] <- x[household]
-      xh[xh == 0 &  v < alpha[1]] <- 1
+    x[x == 2 & u < delta] <- 3
+    x[x == 1 & u < gamma] <- 2
+    
+    e_if_s <- c()
+    for (j in prev_infectious){
+      xs <- x
       
-      network <- which(get.net(beta, nc)[[i]] == 1)
-      xn <- rep(0, n)
-      xn[network] <- x[network]
-      xn[i] <- x[i]
-      xn[xn == 0 &  v < alpha[2]] <- 1
+      household <- h == h[j]
+      xh <- x
+      xh[xh == 0 &  u < alpha[1] & household] <- 1
+      xhs <- which(xh == 1)
+      
+      network <- alink[[j]] == 1
+      xn <- x
+      xn[xn == 0 &  u < alpha[2] & network] <- 1
+      xns <- which(xn == 1)
       
       
-      other <- c(1:n)[-c(household,network)]
-      xo <- rep(0,n)
-      xo[other] <- x[other]
-      xo[i] = x[i]
-      
-      alpha_daily <- daily_constant*beta[i]*beta
+      other <- !(household & network)
+      xo <- x
+      alpha_daily <- daily_constant*beta[j]*beta
       
       #for j in other:
       # alpha_daily[j] <- daily_constant*beta[i]*beta[j]
       
-      xo[xo == 0 &  v < alpha_daily] <- 1
+      xo[xo == 0 &  u < alpha_daily] <- 1
+      xos <- which(xo == 1)
       
-      x[i] <- max(xh[i] == 1 |xn[i] == 1 |xo[i] == 1)
+      infected_by_j <- unique(c(xhs, xns, xos))
+      
+      e_if_s <- unique(append(e_if_s, which(xs == 1)))
     }
+    x[x == 0 & e_if_s] <- 1
     
-    S[t] <- sum(x == 0)
-    E[t] <- sum(x == 1)
-    I[t] <- sum(x == 2)
-    R[t] <- sum(x == 3)
+    S[i] <- sum(x == 0)
+    E[i] <- sum(x == 1)
+    I[i] <- sum(x == 2)
+    R[i] <- sum(x == 3)
   }
   
   list(S=S, E=E, I=I, R=R, t=t)
