@@ -138,7 +138,7 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
   S[1] <- sum(x == 0) # Initial suseptible population is all non-infected people
   I[1] <- sum(x == 2) # Initial infected population
   
-  for (i in 2:nt {
+  for (i in 2:nt) {
     u <- runif(1000)
     prev_infectious <- which(x == 2)
     
