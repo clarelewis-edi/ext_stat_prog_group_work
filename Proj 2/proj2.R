@@ -172,7 +172,7 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
       
       infected_by_j <- unique(c(xhs, xns, xos))
       
-      e_if_s <- unique(append(e_if_s, which(xs == 1)))
+      e_if_s <- unique(append(e_if_s, infected_by_j))
     }
     x[x == 0 & e_if_s] <- 1
     
