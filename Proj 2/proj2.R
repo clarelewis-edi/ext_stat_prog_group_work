@@ -124,7 +124,6 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
   # nt = number of days to simulate
   # proportion of the initial population to randomly start in the I state.
   
-  n = length(beta)
   t = 1:nt
   
   initial_state <- c(0,2) # To start members of pop are only either suseptible or infected
@@ -145,7 +144,7 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
     x[x == 2 & u < delta] <- 3
     x[x == 1 & u < gamma] <- 2
     
-    e_if_s <- c()
+    e_if_s <- rep(1==0, n)
     for (j in prev_infectious){
       xs <- x
       
@@ -172,8 +171,9 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
       
       infected_by_j <- unique(c(xhs, xns, xos))
       
-      e_if_s <- unique(append(e_if_s, infected_by_j))
+      e_if_s[infected_by_j] <- (1==1)
     }
+    daily_infectees <- c()
     x[x == 0 & e_if_s] <- 1
     
     S[i] <- sum(x == 0)
