@@ -86,19 +86,44 @@ h <- sample(rep(1:n, sample(1:hmax, n, replace = TRUE))[1:n])
 # the model properly so that you do not CREATE any links twice (links need to be RECORDED twice, however)
 ################## 
 
-get.net <- function(beta, nc = 1){
-  holding_matrix = matrix(0, nrow = length(beta), ncol = length(beta))
-  prob_matrix = nc/(mean(beta)*(n-1))*(beta%*%t(beta))
+get.net <- function(beta, h, nc = 15){
   
+  # Create a holding matrix to hold the nxn possible contacts
+  holding_matrix = matrix(0, nrow = length(beta), ncol = length(beta))
+  # Matrix of probabilities 
+  # Each element is the probability of a link being created between person i and person j
+  # Symmetric Matrix
+  prob_matrix = (nc/((mean(beta)^2)*(length(beta)-1)))*(beta%*%t(beta))
+  
+  # The probability of creating a link in this way with people in the same household should be 0
+  # Could remove after rbinom() but might effect the average number of non-household contacts
+  family_link = outer(h, h, FUN = "==")
+  prob_matrix[family_link] = 0
+  
+  # As probability matrix is symmetric, only need to consider the probabilities in upper triangle of the probability matrix
+  # If a connection is made between person i and person j, then theres a link between person j and person i
   upper_tri_probs = prob_matrix[upper.tri(prob_matrix)]
+  # Given the probabilities of contacts between individuals, use Bernoulli trial for each possible contact to see if link is created
   link_vec = rbinom(length(upper_tri_probs), size = 1, prob = upper_tri_probs)
   
+  # If a link is made between person iand person j, reflect to lower triangle of matrix as there is thereby a link between person j and person i
   holding_matrix[upper.tri(holding_matrix)] = link_vec
   holding_matrix = holding_matrix + t(holding_matrix)
+  # No link created with oneself
   diag(holding_matrix) = 0
   
+  # Remove any links created between family members
+  # family_link = outer(h, h, FUN = "==")
+  # holding_matrix[family_link] = 0
+  
+  
+  # Change to logical argument for the lapply function
+  holding_matrix = holding_matrix == 1
+  
+  # Return the list of link indices
   net_list = as.list(as.data.frame(holding_matrix))
-  return(net_list)
+  net_list_i = lapply(net_list, which)
+  return(net_list_i)
   
 }
 
