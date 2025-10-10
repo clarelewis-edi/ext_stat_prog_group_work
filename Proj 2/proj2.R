@@ -138,40 +138,42 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
   I[1] <- sum(x == 2) # Initial infected population
   
   for (i in 2:nt) {
-    u <- runif(1000)
+    u <- runif(n)
     prev_infectious <- which(x == 2)
     
     x[x == 2 & u < delta] <- 3
     x[x == 1 & u < gamma] <- 2
     
-    e_if_s <- rep(1==0, n)
+    e_if_s <- rep(FALSE, n)
     for (j in prev_infectious){
+      # v = runif(n)
+      
       xs <- x
       
       household <- h == h[j]
       xh <- x
-      xh[xh == 0 &  u < alpha[1] & household] <- 1
+      xh[xh == 0 &  runif(n) < alpha[1] & household] <- 1
       xhs <- which(xh == 1)
       
       network <- alink[[j]] == 1
       xn <- x
-      xn[xn == 0 &  u < alpha[2] & network] <- 1
+      xn[xn == 0 &  runif(n) < alpha[2] & network] <- 1
       xns <- which(xn == 1)
       
       
-      other <- !(household & network)
+      #      other <- !(household & network)
       xo <- x
       alpha_daily <- daily_constant*beta[j]*beta
       
       #for j in other:
       # alpha_daily[j] <- daily_constant*beta[i]*beta[j]
       
-      xo[xo == 0 &  u < alpha_daily] <- 1
+      xo[xo == 0 &  runif(n) < alpha_daily] <- 1
       xos <- which(xo == 1)
       
       infected_by_j <- unique(c(xhs, xns, xos))
       
-      e_if_s[infected_by_j] <- (1==1)
+      e_if_s[infected_by_j] <- (TRUE)
     }
     daily_infectees <- c()
     x[x == 0 & e_if_s] <- 1
