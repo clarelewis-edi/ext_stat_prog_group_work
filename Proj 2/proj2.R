@@ -80,6 +80,8 @@ n <- 1000
 
 h <- sample(rep(1:n, sample(1:hmax, n, replace = TRUE))[1:n])
 
+beta <- runif(n,0,1)
+
 ################## 
 # 2: Write function get.net(beta,nc=15) where beta is the n vector of Bi value for each person. The function should return a list,
 # the ith element of which is a vector of indices of the regular (non-household) contacts of a person i. Must be careful to implement
@@ -127,6 +129,7 @@ get.net <- function(beta, h, nc = 15){
   
 }
 
+alink <- get.net(beta,h,nc=15)
 
 ################## 
 # 3: Write the function:
@@ -213,20 +216,21 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
 ################## 
 # 4: Write a function to nicely plot the dynamics of the simulated population states as returned by nseir (a better version of the plots in 6.2 in the notes)
 ################## 
+par(mfcol=c(2,2),mar=c(4,4,1,1)) # set plot window up for multiple plots
 
-plot.output <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005) {
-  par(mfcol=c(2,2),mar=c(4,4,1,1)) # set plot window up for multiple plots
+plot.output <- function(beta,h,alink) {
   
   # add graph titles, rotate y axis labels, add key, change colors maybe? 
   
   # potentially set up a loop to go through each epi or just have one 
-  epi <- nseir(beta ,h, alink, delta, gamma, nc, nt, pinf)
+  epi <- nseir(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
   
   # his plots
-  plot(epi$S,ylim=c(0,max(epi$S)),main="Default Params",xlab="day",ylab="N") ## S black
+  plot(epi$S,ylim=c(0,max(epi$S)),main="Default Params",xlab="day",ylab="N",las=1) ## S black
   points(epi$E,col=4);points(epi$I,col=2);points(epi$R,col=3) ## E (blue) and I (red)
-  legend(x="right",legend = c("Suceptible", "Exposed", "Infected", "Recovered"),
-         box.lty=0, pch=1,
+  legend(x="left",legend = c("Suceptible", "Exposed", "Infected", "Recovered"),
+         bty='n',
+         pch=1, cex = .75,
          col = c("black","blue","red", "green"),
          text.col = c("black","blue","red", "green"))
   
@@ -242,10 +246,10 @@ plot.output <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15
 # Comment on the apparent effect of the household and network structure relative to random mixing
 ################## 
 
-plot.output() #run 1: default params
-plot.output() #run 2: remove household and regular network structure, while keeping the average initial number of infectious contacts per day the same for each person by setting ah=ac=0 and ar=0.04
-plot.output() #run 3: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
-plot.output() #run 4: combine the previous two scenarios (constant beta, random mixing)
+plot.output(beta,h,alink) #run 1: default params
+plot.output(beta,h,alink) #run 2: remove household and regular network structure, while keeping the average initial number of infectious contacts per day the same for each person by setting ah=ac=0 and ar=0.04
+plot.output(beta,h,alink) #run 3: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
+plot.output(beta,h,alink) #run 4: combine the previous two scenarios (constant beta, random mixing)
 
 
 ########### code given in section 6.2 that is referenced in the assignment instructions
