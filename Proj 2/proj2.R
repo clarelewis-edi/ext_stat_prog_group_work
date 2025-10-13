@@ -175,25 +175,23 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
       
       xs <- x
       
-      household <- h == h[j]
+      household <- rep(0, n)
+      household[which(h == h[j])] <- 1
       xh <- x
-      xh[xh == 0 &  runif(n) < alpha[1] & household] <- 1
+      xh[runif(n) < alpha[1]*household] <- 1
       xhs <- which(xh == 1)
       
-      network <- alink[[j]] == 1
+      network <- rep(0, n)
+      network[alink[[j]]] <- 1
       xn <- x
-      xn[xn == 0 &  runif(n) < alpha[2] & network] <- 1
+      xn[runif(n) < alpha[2]*network] <- 1
       xns <- which(xn == 1)
       
       
-      #      other <- !(household & network)
       xo <- x
       alpha_daily <- daily_constant*beta[j]*beta
       
-      #for j in other:
-      # alpha_daily[j] <- daily_constant*beta[i]*beta[j]
-      
-      xo[xo == 0 &  runif(n) < alpha_daily] <- 1
+      xo[runif(n) < alpha_daily] <- 1
       xos <- which(xo == 1)
       
       infected_by_j <- unique(c(xhs, xns, xos))
