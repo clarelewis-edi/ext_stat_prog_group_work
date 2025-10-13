@@ -214,15 +214,9 @@ alink <- get.net(beta,h,nc=15)
 # }
 
 #-----------------------------
-nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005){
-  ## SEIR stochastic simulation model (S,E,I,R are states 0,1,2,3)
-  # b, h, alink as defined above
-  # alpha = vector of transmition probabilities by relationship
-  # delta = probability of moving from I to R
-  # gamma = probability of moving from E to I
-  # nc = average number of contacts per person
-  # nt = number of days to simulate
-  # proportion of the initial population to randomly start in the I state.i
+nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, 
+                  nc = 15, nt = 100, pinf = .005) {
+  
   n = length(beta)
   t = 1:nt
   
@@ -231,37 +225,41 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
   x <- sample(initial_state, replace = TRUE, size = n, prob = initial_prob) # Randomly assigns initial states based on pinf
   
   beta_bar <- mean(beta)
-  daily_constant <- (alpha[3]*nc)/((beta_bar^2)*(n-1))
+  daily_constant <- (alpha[3] * nc)/((beta_bar^2)*(n-1))
   
   S <- E <- I <- R <- rep(0, nt)  # Defining vectors that will contain the pop in the states on each day
   S[1] <- sum(x == 0) # Initial suseptible population is all non-infected people
   I[1] <- sum(x == 2) # Initial infected population
   
-  for(i in 2:nt) {
+  for (i in 2:nt) {
     u <- runif(n)
     prev_infectious <- which(x == 2)
     
     x[x == 2 & u < delta] <- 3
     x[x == 1 & u < gamma] <- 2
     
-    
-    # Household
-    infected_hh_member_count <- tabulate(h[prev_infectious], nbins = max(h))
-    alpha_by_hh = 1-(1-alpha[1])^(infected_hh_member_count)
-    alpha_by_ii = alpha_by_hh[h]
-    x[x == 0 & u < alpha_by_ii] <- 1
-    
-    # Network
-    infected_by_network_count <- tabulate(unlist(alink), nbins = n)
-    alpha_by_ii = 1-(1-alpha[2])^(infected_by_network_count)
-    x[x == 0 & u < alpha_by_ii] <- 1
-    
-    # Random Mixing
-    for(j in prev_infectious){
-      alpha_daily <- daily_constant * beta[j] * beta
-      x[x == 0 & u < alpha_daily] <- 1
+    if (length(prev_infectious) > 0) {
+      
+      # Household
+      infected_hh_member_count <- tabulate(h[prev_infectious], nbins = max(h))
+      alpha_by_hh <- 1 - (1 - alpha[1])^(infected_hh_member_count)
+      alpha_hh <- alpha_by_hh[h]
+      x[x == 0 & u < alpha_hh] <- 1
+      
+      # Network
+      infected_network_ids <- unlist(lapply(alink[prev_infectious], as.numeric))
+      # infected_network_ids <- infected_network_ids[!is.na(infected_network_ids)]
+      if (length(infected_network_ids) > 0) {
+        infected_by_network_count <- tabulate(infected_network_ids, nbins = n)
+        alpha_net <- 1 - (1 - alpha[2])^(infected_by_network_count)
+        x[x == 0 & u < alpha_net] <- 1
+      }
+      
+      # Random
+      alpha_daily <- daily_constant * outer(beta[prev_infectious], beta, FUN = "*")
+      alpha_rm <- 1 - apply(1 - alpha_daily, 2, prod)
+      x[x == 0 & u < alpha_rm] <- 1
     }
-    
     
     S[i] <- sum(x == 0)
     E[i] <- sum(x == 1)
@@ -269,13 +267,14 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
     R[i] <- sum(x == 3)
   }
   
-  list(S=S, E=E, I=I, R=R, t=t)
+  list(S = S, E = E, I = I, R = R, t = t)
 }
 
 
+epi = nseir(beta = runif(10000),h,alink = get.net(runif(10000),h,nc = 15),alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
+epi
 
 
-nseir(beta = runif(1000),h,alink = get.net(runif(1000),h,nc = 15),alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
 ################## 
 # 4: Write a function to nicely plot the dynamics of the simulated population states as returned by nseir (a better version of the plots in 6.2 in the notes)
 ################## 
