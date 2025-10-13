@@ -222,7 +222,7 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
   # gamma = probability of moving from E to I
   # nc = average number of contacts per person
   # nt = number of days to simulate
-  # proportion of the initial population to randomly start in the I state.
+  # proportion of the initial population to randomly start in the I state.i
   n = length(beta)
   t = 1:nt
   
