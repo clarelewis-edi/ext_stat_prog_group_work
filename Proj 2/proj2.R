@@ -214,17 +214,22 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
 # 4: Write a function to nicely plot the dynamics of the simulated population states as returned by nseir (a better version of the plots in 6.2 in the notes)
 ################## 
 
-plot.output <- function() {
-  par(mfcol=c(1,4),mar=c(4,4,1,1)) # set plot window up for multiple plots
+plot.output <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005) {
+  par(mfcol=c(2,2),mar=c(4,4,1,1)) # set plot window up for multiple plots
+  
+  # add graph titles, rotate y axis labels, add key, change colors maybe? 
   
   # potentially set up a loop to go through each epi or just have one 
-  epi <- nseir()
-  # Prettier?
-  plot(epi$S,type="l",lwd=2,ylim=c(0,max(epi$S)),xlab="day",ylab="N") ## S black
-  points(epi$E,type="l",lwd=2,col=4);points(epi$I,type="l",lwd=2,col=2) ## E (blue) and I (red)
+  epi <- nseir(beta ,h, alink, delta, gamma, nc, nt, pinf)
+  
   # his plots
-  plot(epi$S,ylim=c(0,max(epi$S)),xlab="day",ylab="N") ## S black
-  points(epi$E,col=4);points(epi$I,col=2) ## E (blue) and I (red)
+  plot(epi$S,ylim=c(0,max(epi$S)),main="Default Params",xlab="day",ylab="N") ## S black
+  points(epi$E,col=4);points(epi$I,col=2);points(epi$R,col=3) ## E (blue) and I (red)
+  legend(x="right",legend = c("Suceptible", "Exposed", "Infected", "Recovered"),
+         box.lty=0, pch=1,
+         col = c("black","blue","red", "green"),
+         text.col = c("black","blue","red", "green"))
+  
 }
 
 ################## 
