@@ -171,23 +171,23 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
     
     e_if_s <- rep(FALSE, n)
     for (j in prev_infectious){
-      # v = runif(n)
+      v = runif(n)
       
       xs <- x
       
       household <- rep(0, n)
       household[which(h == h[j])] <- 1
       xh <- x
-      xh[runif(n) < alpha[1]*household] <- 1
+      xh[v < alpha[1]*household] <- 1
       xhs <- which(xh == 1)
       
       network <- rep(0, n)
       network[alink[[j]]] <- 1
       xn <- x
-      xn[runif(n) < alpha[2]*network] <- 1
+      xn[v < alpha[2]*network] <- 1
       xns <- which(xn == 1)
       
-      
+    
       xo <- x
       alpha_daily <- daily_constant*beta[j]*beta
       
