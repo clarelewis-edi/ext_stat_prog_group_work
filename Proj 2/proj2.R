@@ -142,6 +142,78 @@ alink <- get.net(beta,h,nc=15)
 # especially with careful use of expressions like x[ind1][ind2] <- y in places (assignment to a subvector of a subvector)
 ################## 
 
+# nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005){
+#   ## SEIR stochastic simulation model (S,E,I,R are states 0,1,2,3)
+#   # b, h, alink as defined above
+#   # alpha = vector of transmition probabilities by relationship
+#   # delta = probability of moving from I to R
+#   # gamma = probability of moving from E to I
+#   # nc = average number of contacts per person
+#   # nt = number of days to simulate
+#   # proportion of the initial population to randomly start in the I state.
+#   
+#   t = 1:nt
+#   
+#   initial_state <- c(0,2) # To start members of pop are only either suseptible or infected
+#   initial_prob <- c(1-pinf, pinf)
+#   x <- sample(initial_state, replace = TRUE, size = n, prob = initial_prob) # Randomly assigns initial states based on pinf
+#   
+#   beta_bar <- sum(beta)/n
+#   daily_constant <- alpha[3]*nc/(beta_bar^2*(n-1))
+#   
+#   S <- E <- I <- R <- rep(0, nt)  # Defining vectors that will contain the pop in the states on each day
+#   S[1] <- sum(x == 0) # Initial suseptible population is all non-infected people
+#   I[1] <- sum(x == 2) # Initial infected population
+#   
+#   for (i in 2:nt) {
+#     u <- runif(n)
+#     prev_infectious <- which(x == 2)
+#     
+#     x[x == 2 & u < delta] <- 3
+#     x[x == 1 & u < gamma] <- 2
+#     
+#     e_if_s <- rep(FALSE, n)
+#     for (j in prev_infectious){
+#       # v = runif(n)
+#       
+#       xs <- x
+#       
+#       household <- rep(0, n)
+#       household[which(h == h[j])] <- 1
+#       xh <- x
+#       xh[runif(n) < alpha[1]*household] <- 1
+#       xhs <- which(xh == 1)
+#       
+#       network <- rep(0, n)
+#       network[alink[[j]]] <- 1
+#       xn <- x
+#       xn[runif(n) < alpha[2]*network] <- 1
+#       xns <- which(xn == 1)
+#       
+#       
+#       xo <- x
+#       alpha_daily <- daily_constant*beta[j]*beta
+#       
+#       xo[runif(n) < alpha_daily] <- 1
+#       xos <- which(xo == 1)
+#       
+#       infected_by_j <- unique(c(xhs, xns, xos))
+#       
+#       e_if_s[infected_by_j] <- (TRUE)
+#     }
+#     daily_infectees <- c()
+#     x[x == 0 & e_if_s] <- 1
+#     
+#     S[i] <- sum(x == 0)
+#     E[i] <- sum(x == 1)
+#     I[i] <- sum(x == 2)
+#     R[i] <- sum(x == 3)
+#   }
+#   
+#   list(S=S, E=E, I=I, R=R, t=t)
+# }
+
+#-----------------------------
 nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005){
   ## SEIR stochastic simulation model (S,E,I,R are states 0,1,2,3)
   # b, h, alink as defined above
@@ -151,58 +223,45 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
   # nc = average number of contacts per person
   # nt = number of days to simulate
   # proportion of the initial population to randomly start in the I state.
-  
+  n = length(beta)
   t = 1:nt
   
   initial_state <- c(0,2) # To start members of pop are only either suseptible or infected
   initial_prob <- c(1-pinf, pinf)
   x <- sample(initial_state, replace = TRUE, size = n, prob = initial_prob) # Randomly assigns initial states based on pinf
   
-  beta_bar <- sum(beta)/n
-  daily_constant <- alpha[3]*nc/(beta_bar^2*(n-1))
+  beta_bar <- mean(beta)
+  daily_constant <- (alpha[3]*nc)/((beta_bar^2)*(n-1))
   
   S <- E <- I <- R <- rep(0, nt)  # Defining vectors that will contain the pop in the states on each day
   S[1] <- sum(x == 0) # Initial suseptible population is all non-infected people
   I[1] <- sum(x == 2) # Initial infected population
   
-  for (i in 2:nt) {
+  for(i in 2:nt) {
     u <- runif(n)
     prev_infectious <- which(x == 2)
     
     x[x == 2 & u < delta] <- 3
     x[x == 1 & u < gamma] <- 2
     
-    e_if_s <- rep(FALSE, n)
-    for (j in prev_infectious){
-      # v = runif(n)
-      
-      xs <- x
-      
-      household <- rep(0, n)
-      household[which(h == h[j])] <- 1
-      xh <- x
-      xh[runif(n) < alpha[1]*household] <- 1
-      xhs <- which(xh == 1)
-      
-      network <- rep(0, n)
-      network[alink[[j]]] <- 1
-      xn <- x
-      xn[runif(n) < alpha[2]*network] <- 1
-      xns <- which(xn == 1)
-      
-      
-      xo <- x
-      alpha_daily <- daily_constant*beta[j]*beta
-      
-      xo[runif(n) < alpha_daily] <- 1
-      xos <- which(xo == 1)
-      
-      infected_by_j <- unique(c(xhs, xns, xos))
-      
-      e_if_s[infected_by_j] <- (TRUE)
+    
+    # Household
+    infected_hh_member_count <- tabulate(h[prev_infectious], nbins = max(h))
+    alpha_by_hh = 1-(1-alpha[1])^(infected_hh_member_count)
+    alpha_by_ii = alpha_by_hh[h]
+    x[x == 0 & u < alpha_by_ii] <- 1
+    
+    # Network
+    infected_by_network_count <- tabulate(unlist(alink), nbins = n)
+    alpha_by_ii = 1-(1-alpha[2])^(infected_by_network_count)
+    x[x == 0 & u < alpha_by_ii] <- 1
+    
+    # Random Mixing
+    for(j in prev_infectious){
+      alpha_daily <- daily_constant * beta[j] * beta
+      x[x == 0 & u < alpha_daily] <- 1
     }
-    daily_infectees <- c()
-    x[x == 0 & e_if_s] <- 1
+    
     
     S[i] <- sum(x == 0)
     E[i] <- sum(x == 1)
@@ -213,6 +272,10 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
   list(S=S, E=E, I=I, R=R, t=t)
 }
 
+
+
+
+nseir(beta = runif(1000),h,alink = get.net(runif(1000),h,nc = 15),alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
 ################## 
 # 4: Write a function to nicely plot the dynamics of the simulated population states as returned by nseir (a better version of the plots in 6.2 in the notes)
 ################## 
@@ -228,7 +291,7 @@ plot.output <- function(beta,h,alink) {
   # his plots
   plot(epi$S,ylim=c(0,max(epi$S)),main="Default Params",xlab="day",ylab="N",las=1) ## S black
   points(epi$E,col=4);points(epi$I,col=2);points(epi$R,col=3) ## E (blue) and I (red)
-  legend(x="left",legend = c("Suceptible", "Exposed", "Infected", "Recovered"),
+  legend(x="right",legend = c("Suceptible", "Exposed", "Infected", "Recovered"),
          bty='n',
          pch=1, cex = .75,
          col = c("black","blue","red", "green"),
