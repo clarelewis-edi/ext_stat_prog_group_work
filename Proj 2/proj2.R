@@ -230,6 +230,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   
   for (i in 2:nt) {
     u <- runif(n)
+    v <- runif(n)
     prev_infectious <- which(x == 2)
     
     x[x == 2 & u < delta] <- 3
@@ -255,7 +256,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       # Random
       alpha_daily <- daily_constant * outer(beta[prev_infectious], beta, FUN = "*")
       alpha_rm <- 1 - apply(1 - alpha_daily, 2, prod)
-      x[x == 0 & u < alpha_rm] <- 1
+      x[x == 0 & v < alpha_rm] <- 1
     }
     
     S[i] <- sum(x == 0)
@@ -280,7 +281,7 @@ par(mfcol=c(2,2),mar=c(4,4,1,1)) # set plot window up for multiple plots
 plot.output <- function(beta,h,alink,title) {
   
   epi <- nseir(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
-  
+  title = "title"
   plot(epi$S,ylim=c(0,max(epi$S)),main=title,xlab="day",ylab="N",las=1) ## S black
   points(epi$E,col=4);points(epi$I,col=2);points(epi$R,col=3) ## E (blue) and I (red)
   legend(x="right",legend = c("Suceptible", "Exposed", "Infected", "Recovered"),
