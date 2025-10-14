@@ -37,76 +37,27 @@
 # structure to such models. (Our findings on these are present below, at the end 
 # of the code).
 
-#-------------------------------------------------------------------------------
-### Background provided info
-#-------------------------------------------------------------------------------
+## BUILDING THE MODEL ##
 
-################## 
-# There are n people in each state S, E, I, R.
-# If in state I they have a daily probability of delta of moving to state R.
-# If in state E they have a daily probability of gamma of moving to state I.
-# If in state S the probability of moving to E is the result of infection by someone in state I.
-#   This depends on two characteristics of each person:
-#     who they share a household with
-#     who is in their network of regular contacts
-#   These are modelled as follows:
-################## 
-
-# ################## 
-# # model household characteristic by dividing the n people into households of sizes between 1 and hmax, assume a uniform distribution of household sizes
-# ################## 
-# 
-# 
-# ################## 
-# # contact network model: sociability parameter: Bi where person is i, network is created randomly by assigning a link between person i and j
-# # with probability: (nc*Bi*Bj)/(Bmean^2*(n-1)) where nc is average number of contacts per person an Bmean is mean social parameter. People in the same household are excluded from such contacts
-# ################## 
-
-
-# There are several ways for person i in the state I to infect a person j in state S
-# ##################
-# # Way 1: if j is a household member, there is a dialy probability ah of i infecting j
-# ##################
-# 
-# 
-# ##################
-# # Way 2: if j is in i's regular network of contacts, then there is a daily probability ac of i infecting j
-# ##################
-# 
-# 
-# ##################
-# # Way 3: irrespective of household or regular network relations there is a daily probability: (ar*nc*Bi*Bj)/(Bmean^2*(n-1)) of i infecting j (random mixing)
-# ##################
-
-# # note: the use of the same nc in the random mixing and regular network expressions is a simplification
-
-#-------------------------------------------------------------------------------
-################## 
-# Assignment Goal: impliment the model and provide illustration of its use to investigate the role of household and network structure on epidemic dynamics.
-# code work with any pop size: n up to at least 10,000, but we should test and develop with n = 1000
-################## 
-
-#-------------------------------------------------------------------------------
-#### Task steps
-#-------------------------------------------------------------------------------
-
-################## 
-# 1: Write code to produce vector h (should be length n) of integers indicating which household each person belongs to
-# Household sizes should be uniformly distributed between 1 and hmax. For example if h1, h56 and h907 are all 13 and these are the only
-# 13s in h then people 1, 56, and 907 all live in the same 3 person household
-# h can be created with one line of code by careful use of rep and sample. Use hmax = 5 by default
-################## 
+# ---- Social Structures ----
+# Households #
 
 hmax <- 5
 n <- 10000
 
 h <- sample(rep(1:n, sample(1:hmax, n, replace = TRUE))[1:n])
 
-################## 
-# 2: Write function get.net(beta,nc=15) where beta is the n vector of Bi value for each person. The function should return a list,
-# the ith element of which is a vector of indices of the regular (non-household) contacts of a person i. Must be careful to implement
-# the model properly so that you do not CREATE any links twice (links need to be RECORDED twice, however)
-################## 
+# Network #
+
+# GET NET
+# 
+# The inputs for this function: beta, h, nc
+# - beta:
+# - h: 
+# - nc:
+# The output for this function: net_list_i
+# - net_list_i
+
 
 get.net <- function(beta, h, nc = 15){
   
@@ -149,16 +100,7 @@ get.net <- function(beta, h, nc = 15){
   
 }
 
-################## 
-# 3: Write the function:
-# nseir(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
-# where beta and h are as above, alink = list defining the regular contacts of each person as returned by get.net,
-# nt = number of days to simulate, and pinf = proportion of initial population to randomly start in the I state
-# The function should implement the model given above and return a list with elements S,E,I,R and t = total population in each class
-# each day and the day, respectively
-# Note: while looping through individuals in the I state is probably inevitable, the code can still be made to run in a few seconds for n = 10000,
-# especially with careful use of expressions like x[ind1][ind2] <- y in places (assignment to a subvector of a subvector)
-################## 
+# ---- NSEIR Model ---- 
 
 # NSEIR FUNCTION
 # A function that takes in population and epidemiological factors and models
@@ -178,9 +120,8 @@ get.net <- function(beta, h, nc = 15){
 # -nc: Average number of contacts per person
 # -nt: Number of days (duration) for which to simulate the model
 # -pinf: Proportion of the population that are initially infected
-#
-# The output for this function: next_word
-# - next_word: A list vectors S, E, I, R, and t, which give the number of people
+# The output for this function: SEIRt
+# - SEIRt: A list  of vectors S, E, I, R, and t, which give the number of people
 #              in each state by day, and the corresponding days.
 
 nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, 
@@ -248,15 +189,25 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     R[i] <- sum(x == 3)
   }
   
-  list(S = S, E = E, I = I, R = R, t = t) # Returns a list with the number of people in each state by day, and the corresponding days
+  SEIRt <- list(S = S, E = E, I = I, R = R, t = t) # The number of people in each state by day, and the corresponding days
+  SEIRt # Function returns this list
 }
 
-################## 
-# 4: Write a function to nicely plot the dynamics of the simulated population states as returned by nseir (a better version of the plots in 6.2 in the notes)
-################## 
-par(mfcol=c(2,2),mar=c(4,4,2,1)) # set plot window up for multiple plots
+# ---- Model Visualisation ----
 
-plot.output <- function(beta,h,alink,alpha,title) {
+
+# GET NET
+# 
+# The inputs for this function: beta,h,alink,alpha,title
+# - beta:
+# - h:
+# - alink:
+# - alpha: 
+# - title:
+# The output for this function: 
+# - 
+
+plot.output <- function(beta, h, alink, alpha, title) {
   
   epi <- nseir(beta,h,alink,alpha,delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
   plot(epi$S,ylim=c(0,max(epi$S)),main=title,xlab="",ylab="N",las=1) ## S black
@@ -269,7 +220,7 @@ plot.output <- function(beta,h,alink,alpha,title) {
   title(xlab="Day", line=1.75)
 }
 
-# full model, random mixing, constant beta, random mixing and constant beta
+
 ################## 
 # 5: Setting beta to a vector of U(0,1) random variables, use the model to compare 4 scenarios and plot them next to each other (suitably labelled).
 # First: full model with default parameters
@@ -278,12 +229,20 @@ plot.output <- function(beta,h,alink,alpha,title) {
 # Third: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
 # Fourth: combine the previous two scenarios (constant beta, random mixing)
 # Comment on the apparent effect of the household and network structure relative to random mixing
-################## 
-beta = runif(n)
-alink = get.net(runif(n),h,nc = 15)
-beta_constant <- rep(sum(beta)/length(beta), n)
 
-plot.output(beta,h,alink,alpha=c(.1,.01,.01),"Full Model") #run 1: default params
-plot.output(beta,h,alink,alpha=c(0,0,.04),"Random Mixing") #run 2: remove household and regular network structure, while keeping the average initial number of infectious contacts per day the same for each person by setting ah=ac=0 and ar=0.04
-plot.output(beta = beta_constant,h,alink,alpha=c(.1,.01,.01),"Constant Beta") #run 3: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
-plot.output(beta = beta_constant,h,alink,alpha=c(0,0,.04),"Combined") #run 4: combine the previous two scenarios (constant beta, random mixing)
+# ---- Running the Model  ----
+
+# Defining Parameters #
+# ~~ Should we define h as a function and the set n and hmax down here and run everything to build the structures and models here?
+
+n <- 10000 # Size of population to be modeled
+beta <- runif(n) # Sociability vector
+alink <- get.net(runif(n),h,nc = 15) # Building social networks
+beta_constant <- rep(sum(beta)/length(beta), n) # Defining constant beta (eg. if social distancing enacted)
+
+par(mfcol=c(2,2), mar=c(4,4,2,1)) # Set plot window up for multiple plots
+
+plot.output(beta,h,alink,alpha=c(.1,.01,.01),"Full Model") # Run 1: default params
+plot.output(beta,h,alink,alpha=c(0,0,.04),"Random Mixing") # Run 2: remove household and regular network structure, while keeping the average initial number of infectious contacts per day the same for each person by setting ah=ac=0 and ar=0.04
+plot.output(beta = beta_constant,h,alink,alpha=c(.1,.01,.01),"Constant Beta") # Run 3: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
+plot.output(beta = beta_constant,h,alink,alpha=c(0,0,.04),"Combined") # Run 4: combine the previous two scenarios (constant beta, random mixing)
