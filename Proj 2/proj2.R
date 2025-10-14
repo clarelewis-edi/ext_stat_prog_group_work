@@ -138,7 +138,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   #initial_prob <- c(1-pinf, pinf)
   #x <- sample(initial_state, replace = TRUE, size = n, prob = initial_prob) # Randomly assigns initial states based on pinf
   
-  daily_constant <- (alpha[3] * nc)/((mean(beta_bar)^2)*(n-1)) # Defining constant factor of probability of random infection between two people
+  daily_constant <- (alpha[3] * nc)/((mean(beta)^2)*(n-1)) # Defining constant factor of probability of random infection between two people
   
   S <- E <- I <- R <- rep(0, nt)  # Defining vectors that will contain the pop in the states on each day
   S[1] <- sum(x == 0) # Initial suseptible population is all non-infected people
