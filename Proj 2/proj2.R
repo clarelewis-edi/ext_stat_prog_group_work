@@ -33,7 +33,7 @@
 # of the epidemic.
 # 
 # These functions are then used to model, visualise and compare four scenarios in
-# order to better understand the effects of applying socialbility and social
+# order to better understand the effects of applying sociability and social
 # structure to such models. (Our findings on these are present below, at the end 
 # of the code).
 
@@ -62,28 +62,28 @@ h <- sample(rep(1:n, sample(1:hmax, n, replace = TRUE))[1:n])
 get.net <- function(beta, h, nc = 15){
   
   # Create a holding matrix to hold the nxn possible contacts
-  holding_matrix = matrix(0, nrow = length(beta), ncol = length(beta))
+  holding_matrix <- matrix(0, nrow = length(beta), ncol = length(beta))
   # Matrix of probabilities 
   # Each element is the probability of a link being created between person i and person j
   # Symmetric Matrix
-  prob_matrix = (nc/((mean(beta)^2)*(length(beta)-1)))*(beta%*%t(beta))
+  prob_matrix <- (nc/((mean(beta)^2)*(length(beta)-1)))*(beta%*%t(beta))
   
   # The probability of creating a link in this way with people in the same household should be 0
   # Could remove after rbinom() but might effect the average number of non-household contacts
-  family_link = outer(h, h, FUN = "==")
+  family_link <- outer(h, h, FUN = "==")
   prob_matrix[family_link] = 0
   
   # As probability matrix is symmetric, only need to consider the probabilities in upper triangle of the probability matrix
   # If a connection is made between person i and person j, then theres a link between person j and person i
-  upper_tri_probs = prob_matrix[upper.tri(prob_matrix)]
+  upper_tri_probs <- prob_matrix[upper.tri(prob_matrix)]
   # Given the probabilities of contacts between individuals, use Bernoulli trial for each possible contact to see if link is created
-  link_vec = rbinom(length(upper_tri_probs), size = 1, prob = upper_tri_probs)
+  link_vec <- rbinom(length(upper_tri_probs), size = 1, prob = upper_tri_probs)
   
   # If a link is made between person iand person j, reflect to lower triangle of matrix as there is thereby a link between person j and person i
-  holding_matrix[upper.tri(holding_matrix)] = link_vec
-  holding_matrix = holding_matrix + t(holding_matrix)
+  holding_matrix[upper.tri(holding_matrix)] <- link_vec
+  holding_matrix <- holding_matrix + t(holding_matrix)
   # No link created with oneself
-  diag(holding_matrix) = 0
+  diag(holding_matrix) <- 0
   
   # Remove any links created between family members
   # family_link = outer(h, h, FUN = "==")
@@ -91,11 +91,11 @@ get.net <- function(beta, h, nc = 15){
   
   
   # Change to logical argument for the lapply function
-  holding_matrix = holding_matrix == 1
+  holding_matrix <- holding_matrix == 1
   
   # Return the list of link indices
-  net_list = as.list(as.data.frame(holding_matrix))
-  net_list_i = lapply(net_list, which)
+  net_list <- as.list(as.data.frame(holding_matrix))
+  net_list_i <- lapply(net_list, which)
   return(net_list_i)
   
 }
@@ -107,19 +107,19 @@ get.net <- function(beta, h, nc = 15){
 # the progression of the epidemic through the population for a given duration.
 #
 # The inputs for this function: beta, h, alink, alpha, delta, gamma, nc, nt, pinf
-# - beta: Vector of socialbility parameters of the population
-# -h: Vector assigning each person to a household
-# -alink: List defining the regular contacts of each person (as returned by get.net)
-# -alpha: Probability vector of (α_h, α_c, α_r)
+# - beta: Vector of sociability parameters of the population
+# - h: Vector assigning each person to a household
+# - alink: List defining the regular contacts of each person (as returned by get.net)
+# - alpha: Probability vector of (α_h, α_c, α_r)
 #     - α_h: Probability of infecting a member of the same household
 #     - α_c: Probability of infecting a member of their regular contacts network
 #     - α_r: Constant factor of the probability of infection spreading randomly
 #             between two people, irrespective of other relations
-# -delta: Probability of moving from the infected to recovered class
-# -gamma: Probability of moving from the exposed to infected class
-# -nc: Average number of contacts per person
-# -nt: Number of days (duration) for which to simulate the model
-# -pinf: Proportion of the population that are initially infected
+# - delta: Probability of moving from the infected to recovered class
+# - gamma: Probability of moving from the exposed to infected class
+# - nc: Average number of contacts per person
+# - nt: Number of days (duration) for which to simulate the model
+# - pinf: Proportion of the population that are initially infected
 # The output for this function: SEIRt
 # - SEIRt: A list  of vectors S, E, I, R, and t, which give the number of people
 #              in each state by day, and the corresponding days.
@@ -127,21 +127,21 @@ get.net <- function(beta, h, nc = 15){
 nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, 
                   nc = 15, nt = 100, pinf = .005) {
   
-  n = length(beta) # The population size
-  t = 1:nt # Vector of the days of the simulation 
+  n <- length(beta) # The population size
+  t <- 1:nt # Vector of the days of the simulation 
   
-  x <- rep(0, n) # Initialising a state vector with all suseptible
+  x <- rep(0, n) # Initialising a state vector with all susceptible
   x[sample(c(1:n), round(pinf*n))] <- 1 # Moving pinf proportion to infected state
   
   # Basing initial infection based on pinf being prob, should be proportion, above correct.
-  #initial_state <- c(0,2) # To start members of pop are only either suseptible or infected
+  #initial_state <- c(0,2) # To start members of pop are only either susceptible or infected
   #initial_prob <- c(1-pinf, pinf)
   #x <- sample(initial_state, replace = TRUE, size = n, prob = initial_prob) # Randomly assigns initial states based on pinf
   
   daily_constant <- (alpha[3] * nc)/((mean(beta)^2)*(n-1)) # Defining constant factor of probability of random infection between two people
   
   S <- E <- I <- R <- rep(0, nt)  # Defining vectors that will contain the pop in the states on each day
-  S[1] <- sum(x == 0) # Initial suseptible population is all non-infected people
+  S[1] <- sum(x == 0) # Initial susceptible population is all non-infected people
   I[1] <- sum(x == 2) # Initial infected population
   
   for (i in 2:nt) { # Looping over days to update and store the state for each day
@@ -160,7 +160,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       
       # Household
       infected_hh_member_count <- tabulate(h[prev_infectious], nbins = max(h)) # Counts the number of infected people per household
-      # If m in a house are infected, the probabilty of a suseptible person in the house becoming exposed is '1 - (1 - α_h)^m'
+      # If m in a house are infected, the probability of a susceptible person in the house becoming exposed is '1 - (1 - α_h)^m'
       alpha_by_hh <- 1 - (1 - alpha[1])^(infected_hh_member_count)  # Defines probability of infections by each household
       alpha_hh <- alpha_by_hh[h] # Vector of probability of infection for every person by their household
       x[x == 0 & u < alpha_hh] <- 1 # Moves population in S to E by their household probability
@@ -198,37 +198,41 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
 
 # GET NET
 # 
-# The inputs for this function: beta,h,alink,alpha,title
-# - beta:
-# - h:
-# - alink:
-# - alpha: 
-# - title:
+# The inputs for this function: beta, h, alink, alpha, title
+# beta, h, alink, and alpha are the same as the variables used in nseir,
+# these are the only variables that will be changed between the plots
+# - beta: Vector of socialbility parameters of the population
+# - h: Vector assigning each person to a household
+# - alink: List defining the regular contacts of each person (as returned by get.net)
+# - alpha: Probability vector of (α_h, α_c, α_r)
+#     - α_h: Probability of infecting a member of the same household
+#     - α_c: Probability of infecting a member of their regular contacts network
+#     - α_r: Constant factor of the probability of infection spreading randomly
+#             between two people, irrespective of other relations
+# - title: Title to be displayed above the plot
 # The output for this function: 
-# - 
+# - A plot is created and displayed showing the model results for the defined input values
 
 plot.output <- function(beta, h, alink, alpha, title) {
-  
+  # store the output from the nseir model as epi
   epi <- nseir(beta,h,alink,alpha,delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
-  plot(epi$S,ylim=c(0,max(epi$S)),main=title,xlab="",ylab="N",las=1) ## S black
-  points(epi$E,col=4);points(epi$I,col=2);points(epi$R,col=3) ## E (blue) and I (red)
-  legend(x="right",legend = c("Suceptible", "Exposed", "Infected", "Recovered"),
-         bty='n',
-         pch=1, cex = .75,
+  # first, plot the susceptible population (black) and set up some parameters
+  # for the plots
+  plot(epi$S,ylim=c(0,max(epi$S)),
+       main=title,xlab="",ylab="N", # title from function input, manual axis labels
+       las=1) # las rotates the y axis labels to be horizontal
+  points(epi$E,col=4) # add the exposed population to the plot (blue)
+  points(epi$I,col=2) # add the infected population to the plot (infected)
+  points(epi$R,col=3) # add the recovered population to the plot (green)
+  # set up the legend to identify what each color represents
+  legend(x="right",legend = c("Susceptible", "Exposed", "Infected", "Recovered"),
+         bty='n', # no box around legend
+         pch=1, cex = .75, # symbol and size of legend
          col = c("black","blue","red", "green"),
          text.col = c("black","blue","red", "green"))
+  # manually add x axis label to have the ability to adjust the spacing between the axis and the label
   title(xlab="Day", line=1.75)
 }
-
-
-################## 
-# 5: Setting beta to a vector of U(0,1) random variables, use the model to compare 4 scenarios and plot them next to each other (suitably labelled).
-# First: full model with default parameters
-# Second: what happens when you remove the household and regular network structure, while keeping the average initial number of infectious contacts per day the same for each person
-# by setting ah=ac=0 and ar=0.04
-# Third: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
-# Fourth: combine the previous two scenarios (constant beta, random mixing)
-# Comment on the apparent effect of the household and network structure relative to random mixing
 
 # ---- Running the Model  ----
 
@@ -240,9 +244,9 @@ beta <- runif(n) # Sociability vector
 alink <- get.net(runif(n),h,nc = 15) # Building social networks
 beta_constant <- rep(sum(beta)/length(beta), n) # Defining constant beta (eg. if social distancing enacted)
 
-par(mfcol=c(2,2), mar=c(4,4,2,1)) # Set plot window up for multiple plots
+par(mfcol=c(2,2), mar=c(4,4,2,1)) # Set plot window up for multiple plots and adjust margins
 
 plot.output(beta,h,alink,alpha=c(.1,.01,.01),"Full Model") # Run 1: default params
-plot.output(beta,h,alink,alpha=c(0,0,.04),"Random Mixing") # Run 2: remove household and regular network structure, while keeping the average initial number of infectious contacts per day the same for each person by setting ah=ac=0 and ar=0.04
-plot.output(beta = beta_constant,h,alink,alpha=c(.1,.01,.01),"Constant Beta") # Run 3: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
-plot.output(beta = beta_constant,h,alink,alpha=c(0,0,.04),"Combined") # Run 4: combine the previous two scenarios (constant beta, random mixing)
+plot.output(beta,h,alink,alpha=c(0,0,.04),"Random Mixing") # Run 2: random mixing only
+plot.output(beta = beta_constant,h,alink,alpha=c(.1,.01,.01),"Constant Beta") # Run 3: set a constant beta
+plot.output(beta = beta_constant,h,alink,alpha=c(0,0,.04),"Combined") # Run 4: combination of runs 3 and 4
