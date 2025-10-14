@@ -75,6 +75,8 @@
 
 set.seed(17)
 
+start_time <- Sys.time()
+
 hmax <- 5
 n <- 10000
 
@@ -127,7 +129,6 @@ get.net <- function(beta, h, nc = 15){
   
 }
 
-
 ################## 
 # 3: Write the function:
 # nseir(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
@@ -139,78 +140,6 @@ get.net <- function(beta, h, nc = 15){
 # especially with careful use of expressions like x[ind1][ind2] <- y in places (assignment to a subvector of a subvector)
 ################## 
 
-# nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005){
-#   ## SEIR stochastic simulation model (S,E,I,R are states 0,1,2,3)
-#   # b, h, alink as defined above
-#   # alpha = vector of transmition probabilities by relationship
-#   # delta = probability of moving from I to R
-#   # gamma = probability of moving from E to I
-#   # nc = average number of contacts per person
-#   # nt = number of days to simulate
-#   # proportion of the initial population to randomly start in the I state.
-#   
-#   t = 1:nt
-#   
-#   initial_state <- c(0,2) # To start members of pop are only either suseptible or infected
-#   initial_prob <- c(1-pinf, pinf)
-#   x <- sample(initial_state, replace = TRUE, size = n, prob = initial_prob) # Randomly assigns initial states based on pinf
-#   
-#   beta_bar <- sum(beta)/n
-#   daily_constant <- alpha[3]*nc/(beta_bar^2*(n-1))
-#   
-#   S <- E <- I <- R <- rep(0, nt)  # Defining vectors that will contain the pop in the states on each day
-#   S[1] <- sum(x == 0) # Initial suseptible population is all non-infected people
-#   I[1] <- sum(x == 2) # Initial infected population
-#   
-#   for (i in 2:nt) {
-#     u <- runif(n)
-#     prev_infectious <- which(x == 2)
-#     
-#     x[x == 2 & u < delta] <- 3
-#     x[x == 1 & u < gamma] <- 2
-#     
-#     e_if_s <- rep(FALSE, n)
-#     for (j in prev_infectious){
-#       # v = runif(n)
-#       
-#       xs <- x
-#       
-#       household <- rep(0, n)
-#       household[which(h == h[j])] <- 1
-#       xh <- x
-#       xh[runif(n) < alpha[1]*household] <- 1
-#       xhs <- which(xh == 1)
-#       
-#       network <- rep(0, n)
-#       network[alink[[j]]] <- 1
-#       xn <- x
-#       xn[runif(n) < alpha[2]*network] <- 1
-#       xns <- which(xn == 1)
-#       
-#       
-#       xo <- x
-#       alpha_daily <- daily_constant*beta[j]*beta
-#       
-#       xo[runif(n) < alpha_daily] <- 1
-#       xos <- which(xo == 1)
-#       
-#       infected_by_j <- unique(c(xhs, xns, xos))
-#       
-#       e_if_s[infected_by_j] <- (TRUE)
-#     }
-#     daily_infectees <- c()
-#     x[x == 0 & e_if_s] <- 1
-#     
-#     S[i] <- sum(x == 0)
-#     E[i] <- sum(x == 1)
-#     I[i] <- sum(x == 2)
-#     R[i] <- sum(x == 3)
-#   }
-#   
-#   list(S=S, E=E, I=I, R=R, t=t)
-# }
-
-#-----------------------------
 nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, 
                   nc = 15, nt = 100, pinf = .005) {
   
@@ -268,28 +197,22 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   list(S = S, E = E, I = I, R = R, t = t)
 }
 
-
-epi = nseir(beta = runif(10000),h,alink = get.net(runif(10000),h,nc = 15),alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
-epi
-
-
 ################## 
 # 4: Write a function to nicely plot the dynamics of the simulated population states as returned by nseir (a better version of the plots in 6.2 in the notes)
 ################## 
-par(mfcol=c(2,2),mar=c(4,4,1,1)) # set plot window up for multiple plots
+par(mfcol=c(2,2),mar=c(4,4,2,1)) # set plot window up for multiple plots
 
-plot.output <- function(beta,h,alink,title) {
+plot.output <- function(beta,h,alink,alpha,title) {
   
-  epi <- nseir(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
-  title = "title"
-  plot(epi$S,ylim=c(0,max(epi$S)),main=title,xlab="day",ylab="N",las=1) ## S black
+  epi <- nseir(beta,h,alink,alpha,delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
+  plot(epi$S,ylim=c(0,max(epi$S)),main=title,xlab="",ylab="N",las=1) ## S black
   points(epi$E,col=4);points(epi$I,col=2);points(epi$R,col=3) ## E (blue) and I (red)
   legend(x="right",legend = c("Suceptible", "Exposed", "Infected", "Recovered"),
          bty='n',
          pch=1, cex = .75,
          col = c("black","blue","red", "green"),
          text.col = c("black","blue","red", "green"))
-  
+  title(xlab="Day", line=1.75)
 }
 
 # full model, random mixing, constant beta, random mixing and constant beta
@@ -302,13 +225,19 @@ plot.output <- function(beta,h,alink,title) {
 # Fourth: combine the previous two scenarios (constant beta, random mixing)
 # Comment on the apparent effect of the household and network structure relative to random mixing
 ################## 
+beta = runif(n)
+alink = get.net(runif(n),h,nc = 15)
+beta_constant <- rep(sum(beta)/length(beta), n)
 
-plot.output(beta = runif(10000),h,alink = get.net(runif(10000),h,nc = 15),"Full Model") #run 1: default params
-plot.output(beta = runif(10000),h,alink = get.net(runif(10000),h,nc = 15),"Random Mixing") #run 2: remove household and regular network structure, while keeping the average initial number of infectious contacts per day the same for each person by setting ah=ac=0 and ar=0.04
-plot.output(beta = runif(10000),h,alink = get.net(runif(10000),h,nc = 15),"Constant Beta") #run 3: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
-plot.output(beta = runif(10000),h,alink = get.net(runif(10000),h,nc = 15),"Combined") #run 4: combine the previous two scenarios (constant beta, random mixing)
+plot.output(beta,h,alink,alpha=c(.1,.01,.01),"Full Model") #run 1: default params
+plot.output(beta,h,alink,alpha=c(0,0,.04),"Random Mixing") #run 2: remove household and regular network structure, while keeping the average initial number of infectious contacts per day the same for each person by setting ah=ac=0 and ar=0.04
+plot.output(beta = beta_constant,h,alink,alpha=c(.1,.01,.01),"Constant Beta") #run 3: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
+plot.output(beta = beta_constant,h,alink,alpha=c(0,0,.04),"Combined") #run 4: combine the previous two scenarios (constant beta, random mixing)
 
+end_time <- Sys.time()
 
+run_time <- end_time - start_time
+run_time
 ########### code given in section 6.2 that is referenced in the assignment instructions
 # seir <- function(n=10000,ni=10,nt=100,gamma=1/3,delta=1/5,bmu=5e-5,bsc=1e-5) {
 #   ## SEIR stochastic simulation model.
