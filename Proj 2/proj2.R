@@ -76,11 +76,9 @@
 set.seed(17)
 
 hmax <- 5
-n <- 1000
+n <- 10000
 
 h <- sample(rep(1:n, sample(1:hmax, n, replace = TRUE))[1:n])
-
-beta <- runif(n,0,1)
 
 ################## 
 # 2: Write function get.net(beta,nc=15) where beta is the n vector of Bi value for each person. The function should return a list,
@@ -129,7 +127,6 @@ get.net <- function(beta, h, nc = 15){
   
 }
 
-alink <- get.net(beta,h,nc=15)
 
 ################## 
 # 3: Write the function:
@@ -280,15 +277,11 @@ epi
 ################## 
 par(mfcol=c(2,2),mar=c(4,4,1,1)) # set plot window up for multiple plots
 
-plot.output <- function(beta,h,alink) {
+plot.output <- function(beta,h,alink,title) {
   
-  # add graph titles, rotate y axis labels, add key, change colors maybe? 
-  
-  # potentially set up a loop to go through each epi or just have one 
   epi <- nseir(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt = 100,pinf = .005)
   
-  # his plots
-  plot(epi$S,ylim=c(0,max(epi$S)),main="Default Params",xlab="day",ylab="N",las=1) ## S black
+  plot(epi$S,ylim=c(0,max(epi$S)),main=title,xlab="day",ylab="N",las=1) ## S black
   points(epi$E,col=4);points(epi$I,col=2);points(epi$R,col=3) ## E (blue) and I (red)
   legend(x="right",legend = c("Suceptible", "Exposed", "Infected", "Recovered"),
          bty='n',
@@ -298,6 +291,7 @@ plot.output <- function(beta,h,alink) {
   
 }
 
+# full model, random mixing, constant beta, random mixing and constant beta
 ################## 
 # 5: Setting beta to a vector of U(0,1) random variables, use the model to compare 4 scenarios and plot them next to each other (suitably labelled).
 # First: full model with default parameters
@@ -308,10 +302,10 @@ plot.output <- function(beta,h,alink) {
 # Comment on the apparent effect of the household and network structure relative to random mixing
 ################## 
 
-plot.output(beta,h,alink) #run 1: default params
-plot.output(beta,h,alink) #run 2: remove household and regular network structure, while keeping the average initial number of infectious contacts per day the same for each person by setting ah=ac=0 and ar=0.04
-plot.output(beta,h,alink) #run 3: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
-plot.output(beta,h,alink) #run 4: combine the previous two scenarios (constant beta, random mixing)
+plot.output(beta = runif(10000),h,alink = get.net(runif(10000),h,nc = 15),"Full Model") #run 1: default params
+plot.output(beta = runif(10000),h,alink = get.net(runif(10000),h,nc = 15),"Random Mixing") #run 2: remove household and regular network structure, while keeping the average initial number of infectious contacts per day the same for each person by setting ah=ac=0 and ar=0.04
+plot.output(beta = runif(10000),h,alink = get.net(runif(10000),h,nc = 15),"Constant Beta") #run 3: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
+plot.output(beta = runif(10000),h,alink = get.net(runif(10000),h,nc = 15),"Combined") #run 4: combine the previous two scenarios (constant beta, random mixing)
 
 
 ########### code given in section 6.2 that is referenced in the assignment instructions
