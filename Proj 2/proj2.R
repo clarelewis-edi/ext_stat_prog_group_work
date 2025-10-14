@@ -10,8 +10,32 @@
 
 # Setting working directory to folder for Assessment 1
 # setwd("/Users/clarelewis/Documents/github/ext_stat_prog_group_work/Proj 2")
-# setwd("C:/Users/Grace Sheahan/Documents/Extended Statistical Programming/ext_stat_prog_group_work/Proj 2")
+# setwd("C:/Users/Grace Sheahan/ext_stat_prog_group_work/Proj 2")
 # setwd("C:/Users/Luke Egan/Desktop/Extended Statistical Programming/ext_stat_prog_group_work/Proj 2")
+
+#---- Introduction -------------------------------------------------------------
+# 
+# This project aims to build a SEIR stochastic model of the spread of an epidemic
+# within a population with a rudimentary social structure.
+# This is done through expansion of the basic SEIR model to account for
+# households and set social networks, through both of which infection is more
+# likely to spread than through random population mixing.
+# 
+# In the below code functions are build to model the social structure for a
+# population - assigning every individual a household and social network.
+# 
+# A function is build to simulate the spread of an epidemic through this population
+# for a given interval - taking into account the epidemiological factors such as
+# infectiousness and recovery probability as well as the societal connections
+# created in our model).
+# 
+# A plot function is then built to provide clear visualisation of the progression
+# of the epidemic.
+# 
+# These functions are then used to model, visualise and compare four scenarios in
+# order to better understand the effects of applying socialbility and social
+# structure to such models. (Our findings on these are present below, at the end 
+# of the code).
 
 #-------------------------------------------------------------------------------
 ### Background provided info
@@ -72,10 +96,6 @@
 # 13s in h then people 1, 56, and 907 all live in the same 3 person household
 # h can be created with one line of code by careful use of rep and sample. Use hmax = 5 by default
 ################## 
-
-set.seed(17)
-
-start_time <- Sys.time()
 
 hmax <- 5
 n <- 10000
@@ -140,61 +160,95 @@ get.net <- function(beta, h, nc = 15){
 # especially with careful use of expressions like x[ind1][ind2] <- y in places (assignment to a subvector of a subvector)
 ################## 
 
+# NSEIR FUNCTION
+# A function that takes in population and epidemiological factors and models
+# the progression of the epidemic through the population for a given duration.
+#
+# The inputs for this function: beta, h, alink, alpha, delta, gamma, nc, nt, pinf
+# - beta: Vector of socialbility parameters of the population
+# -h: Vector assigning each person to a household
+# -alink: List defining the regular contacts of each person (as returned by get.net)
+# -alpha: Probability vector of (α_h, α_c, α_r)
+#     - α_h: Probability of infecting a member of the same household
+#     - α_c: Probability of infecting a member of their regular contacts network
+#     - α_r: Constant factor of the probability of infection spreading randomly
+#             between two people, irrespective of other relations
+# -delta: Probability of moving from the infected to recovered class
+# -gamma: Probability of moving from the exposed to infected class
+# -nc: Average number of contacts per person
+# -nt: Number of days (duration) for which to simulate the model
+# -pinf: Proportion of the population that are initially infected
+#
+# The output for this function: next_word
+# - next_word: A list vectors S, E, I, R, and t, which give the number of people
+#              in each state by day, and the corresponding days.
+
 nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, 
                   nc = 15, nt = 100, pinf = .005) {
   
-  n = length(beta)
-  t = 1:nt
+  n = length(beta) # The population size
+  t = 1:nt # Vector of the days of the simulation 
   
-  initial_state <- c(0,2) # To start members of pop are only either suseptible or infected
-  initial_prob <- c(1-pinf, pinf)
-  x <- sample(initial_state, replace = TRUE, size = n, prob = initial_prob) # Randomly assigns initial states based on pinf
+  x <- rep(0, n) # Initialising a state vector with all suseptible
+  x[sample(c(1:n), round(pinf*n)] <- 1 # Moving pinf proportion to infected state
   
-  beta_bar <- mean(beta)
-  daily_constant <- (alpha[3] * nc)/((beta_bar^2)*(n-1))
+  # Basing initial infection based on pinf being prob, should be proportion, above correct.
+  #initial_state <- c(0,2) # To start members of pop are only either suseptible or infected
+  #initial_prob <- c(1-pinf, pinf)
+  #x <- sample(initial_state, replace = TRUE, size = n, prob = initial_prob) # Randomly assigns initial states based on pinf
+  
+  daily_constant <- (alpha[3] * nc)/((mean(beta_bar)^2)*(n-1)) # Defining constant factor of probability of random infection between two people
   
   S <- E <- I <- R <- rep(0, nt)  # Defining vectors that will contain the pop in the states on each day
   S[1] <- sum(x == 0) # Initial suseptible population is all non-infected people
   I[1] <- sum(x == 2) # Initial infected population
   
-  for (i in 2:nt) {
-    u <- runif(n)
-    v <- runif(n)
-    prev_infectious <- which(x == 2)
+  for (i in 2:nt) { # Looping over days to update and store the state for each day
     
-    x[x == 2 & u < delta] <- 3
-    x[x == 1 & u < gamma] <- 2
+    u <- runif(n) # Uniform random deviates
+    v <- runif(n) # Two needed to ensure that random infection is distinct from relational infection
     
+    prev_infectious <- which(x == 2) # Vector of indices of infected people
+    # This assumes that moving to state E occurs the day after contact with state I
+    
+    x[x == 2 & u < delta] <- 3 # Moves population in I to R with probability delta
+    x[x == 1 & u < gamma] <- 2 # Moves population in E to I with probability delta
+    
+    # Suseptible people can only become exposed if there were people infected
     if (length(prev_infectious) > 0) {
       
       # Household
-      infected_hh_member_count <- tabulate(h[prev_infectious], nbins = max(h))
-      alpha_by_hh <- 1 - (1 - alpha[1])^(infected_hh_member_count)
-      alpha_hh <- alpha_by_hh[h]
-      x[x == 0 & u < alpha_hh] <- 1
+      infected_hh_member_count <- tabulate(h[prev_infectious], nbins = max(h)) # Counts the number of infected people per household
+      # If m in a house are infected, the probabilty of a suseptible person in the house becoming exposed is '1 - (1 - α_h)^m'
+      alpha_by_hh <- 1 - (1 - alpha[1])^(infected_hh_member_count)  # Defines probability of infections by each household
+      alpha_hh <- alpha_by_hh[h] # Vector of probability of infection for every person by their household
+      x[x == 0 & u < alpha_hh] <- 1 # Moves population in S to E by their household probability
       
       # Network
-      infected_network_ids <- unlist(lapply(alink[prev_infectious], as.numeric))
+      infected_network_ids <- unlist(lapply(alink[prev_infectious], as.numeric)) # Vector of those in the network of any infected person
       # infected_network_ids <- infected_network_ids[!is.na(infected_network_ids)]
-      if (length(infected_network_ids) > 0) {
-        infected_by_network_count <- tabulate(infected_network_ids, nbins = n)
-        alpha_net <- 1 - (1 - alpha[2])^(infected_by_network_count)
-        x[x == 0 & u < alpha_net] <- 1
+      if (length(infected_network_ids) > 0) { # Only proceeds if the infected have people in their network(s)
+        infected_by_network_count <- tabulate(infected_network_ids, nbins = n) # Counts the number of infected people in each persons network
+        alpha_net <- 1 - (1 - alpha[2])^(infected_by_network_count) # Defines each person's probability of infection by their network
+        x[x == 0 & u < alpha_net] <- 1 # Moves population in S to E by their network probability
       }
       
       # Random
       alpha_daily <- daily_constant * outer(beta[prev_infectious], beta, FUN = "*")
-      alpha_rm <- 1 - apply(1 - alpha_daily, 2, prod)
-      x[x == 0 & v < alpha_rm] <- 1
+      # Person i's probability of infection from random mixing is '1 - (probability of not catching through random mixing)'
+      # That is, probability of not catching = (probability of not catching from j) multiplied for each j in prev_infectious
+      alpha_rm <- 1 - apply(1 - alpha_daily, 2, prod) # Defines each person's probability of infection by random mixing (based on their specific alpha_daily's with those in prev_infectious)
+      x[x == 0 & v < alpha_rm] <- 1 # Moves population in S to E by their random mixing probability
     }
     
+    # Defining each state vector input corresponding to the day, as the number of people in that state
     S[i] <- sum(x == 0)
     E[i] <- sum(x == 1)
     I[i] <- sum(x == 2)
     R[i] <- sum(x == 3)
   }
   
-  list(S = S, E = E, I = I, R = R, t = t)
+  list(S = S, E = E, I = I, R = R, t = t) # Returns a list with the number of people in each state by day, and the corresponding days
 }
 
 ################## 
@@ -233,35 +287,3 @@ plot.output(beta,h,alink,alpha=c(.1,.01,.01),"Full Model") #run 1: default param
 plot.output(beta,h,alink,alpha=c(0,0,.04),"Random Mixing") #run 2: remove household and regular network structure, while keeping the average initial number of infectious contacts per day the same for each person by setting ah=ac=0 and ar=0.04
 plot.output(beta = beta_constant,h,alink,alpha=c(.1,.01,.01),"Constant Beta") #run 3: consider the full model but with the beta vector set to simply contain the average of the previous beta vector for every element
 plot.output(beta = beta_constant,h,alink,alpha=c(0,0,.04),"Combined") #run 4: combine the previous two scenarios (constant beta, random mixing)
-
-end_time <- Sys.time()
-
-run_time <- end_time - start_time
-run_time
-########### code given in section 6.2 that is referenced in the assignment instructions
-# seir <- function(n=10000,ni=10,nt=100,gamma=1/3,delta=1/5,bmu=5e-5,bsc=1e-5) {
-#   ## SEIR stochastic simulation model.
-#   ## n = population size; ni = initially infective; nt = number of days
-#   ## gamma = daily prob E -> I; delta = daily prob I -> R;
-#   ## bmu = mean beta; bsc = var(beta) = bmu * bsc
-#   x <- rep(0,n) ## initialize to susceptible state
-#   beta <- rgamma(n,shape=bmu/bsc,scale=bsc) ## individual infection rates
-#   x[1:ni] <- 2 ## create some infectives
-#   S <- E <- I <- R <- rep(0,nt) ## set up storage for pop in each state
-#   S[1] <- n-ni;I[1] <- ni ## initialize
-#   for (i in 2:nt) { ## loop over days
-#     u <- runif(n) ## uniform random deviates
-#     x[x==2&u<delta] <- 3 ## I -> R with prob delta
-#     x[x==1&u<gamma] <- 2 ## E -> I with prob gamma
-#     x[x==0&u<beta*I[i-1]] <- 1 ## S -> E with prob beta*I[i-1]
-#     S[i] <- sum(x==0); E[i] <- sum(x==1)
-#     I[i] <- sum(x==2); R[i] <- sum(x==3)
-#   }
-#   list(S=S,E=E,I=I,R=R,beta=beta)
-# } ## seir
-# 
-# par(mfcol=c(2,3),mar=c(4,4,1,1)) ## set plot window up for multiple plots
-# epi <- seir(bmu=7e-5,bsc=1e-7) ## run simulation
-# hist(epi$beta,xlab="beta",main="") ## beta distribution
-# plot(epi$S,ylim=c(0,max(epi$S)),xlab="day",ylab="N") ## S black
-# points(epi$E,col=4);points(epi$I,col=2) ## E (blue) and I (red)
