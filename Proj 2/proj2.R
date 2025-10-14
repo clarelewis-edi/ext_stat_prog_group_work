@@ -131,7 +131,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   t = 1:nt # Vector of the days of the simulation 
   
   x <- rep(0, n) # Initialising a state vector with all suseptible
-  x[sample(c(1:n), round(pinf*n)] <- 1 # Moving pinf proportion to infected state
+  x[sample(c(1:n), round(pinf*n))] <- 1 # Moving pinf proportion to infected state
   
   # Basing initial infection based on pinf being prob, should be proportion, above correct.
   #initial_state <- c(0,2) # To start members of pop are only either suseptible or infected
