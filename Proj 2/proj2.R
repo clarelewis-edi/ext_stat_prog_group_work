@@ -24,10 +24,10 @@
 # In the below code functions are build to model the social structure for a
 # population - assigning every individual a household and social network.
 # 
-# A function is build to simulate the spread of an epidemic through this population
+# A function is built to simulate the spread of an epidemic through this population
 # for a given interval - taking into account the epidemiological factors such as
 # infectiousness and recovery probability as well as the societal connections
-# created in our model).
+# created in our model.
 # 
 # A plot function is then built to provide clear visualisation of the progression
 # of the epidemic.
@@ -40,65 +40,114 @@
 ## BUILDING THE MODEL ##
 
 # ---- Social Structures ----
+
 # Households #
 
-hmax <- 5
-n <- 10000
+hmax <- 5 # Maximum number of individuals that can be in a family 
+n <- 10000 # Total number of individuals
 
+# Assign each person to a random household
 h <- sample(rep(1:n, sample(1:hmax, n, replace = TRUE))[1:n])
 
 # Network #
 
 # GET NET
 # 
-# The inputs for this function: beta, h, nc
-# - beta:
-# - h: 
-# - nc:
-# The output for this function: net_list_i
-# - net_list_i
+# Inputs:
+# - beta: Vector of sociability parameters of the population
+# - h: Vector assigning each person to a household
+# - nc: Average number of contacts per person
+#
+# Outputs:
+# - net_list_i: A list where each element is a vector containing the indices of
+#               individuals that person i has contact with
 
 
 get.net <- function(beta, h, nc = 15){
+  n <- length(beta)
   
-  # Create a holding matrix to hold the nxn possible contacts
-  holding_matrix <- matrix(0, nrow = length(beta), ncol = length(beta))
-  # Matrix of probabilities 
-  # Each element is the probability of a link being created between person i and person j
-  # Symmetric Matrix
-  prob_matrix <- (nc/((mean(beta)^2)*(length(beta)-1)))*(beta%*%t(beta))
+  # Only concerned with the probabilities in the upper triangle of the network probability matrix
+  # Network probability matrix is symmetric
+  # Pr(link i->j) = Pr(link j->i)
+  # Also want to avoid links being created twice
+  
+  # Indices for upper triangle of network probability matrix
+  upper_triangle_i <- which(upper.tri(diag(n)), arr.ind = T)
+  
+  # Vectorised computation of network probabilities
+  prob_vec <- (nc/((mean(beta)^2)*(n-1)))*(beta[upper_triangle_i[,1]]*beta[upper_triangle_i[,2]])
   
   # The probability of creating a link in this way with people in the same household should be 0
-  # Could remove after rbinom() but might effect the average number of non-household contacts
-  family_link <- outer(h, h, FUN = "==")
-  prob_matrix[family_link] = 0
+  same_hh <- h[upper_triangle_i[,1]] == h[upper_triangle_i[,2]]
+  prob_vec[same_hh] <- 0
   
-  # As probability matrix is symmetric, only need to consider the probabilities in upper triangle of the probability matrix
-  # If a connection is made between person i and person j, then theres a link between person j and person i
-  upper_tri_probs <- prob_matrix[upper.tri(prob_matrix)]
-  # Given the probabilities of contacts between individuals, use Bernoulli trial for each possible contact to see if link is created
-  link_vec <- rbinom(length(upper_tri_probs), size = 1, prob = upper_tri_probs)
+  # Using the network probabilities between individuals
+  # Perform Bernoulli trial for each possible contact to see if link is created
+  link_vec <- rbinom(length(prob_vec), size = 1, prob = prob_vec)
   
-  # If a link is made between person iand person j, reflect to lower triangle of matrix as there is thereby a link between person j and person i
-  holding_matrix[upper.tri(holding_matrix)] <- link_vec
-  holding_matrix <- holding_matrix + t(holding_matrix)
-  # No link created with oneself
-  diag(holding_matrix) <- 0
+  # If a link is made i->j, must account for j->i
+  indivduals_i <- upper_triangle_i[link_vec == 1,1]
+  indivduals_j <- upper_triangle_i[link_vec == 1,2]
+  # Matrix with two columns which holds all links created i->j and j->i
+  all_links <- rbind(cbind(indivduals_i, indivduals_j), cbind(indivduals_j, indivduals_i))
   
-  # Remove any links created between family members
-  # family_link = outer(h, h, FUN = "==")
-  # holding_matrix[family_link] = 0
+  # Create list of all contacts for each individual
+  # Start with individuals with at least one contact
+  existing_link_list <- split(all_links[,2], all_links[,1])
+  net_list <- as.list(rep(0, n))
+  net_list[as.integer(names(existing_link_list))] <- existing_link_list
+  # Now add in individuals with no contacts 
+  no_link <- setdiff(1:n, as.integer(names(existing_link_list)))
+  net_list[no_link] <- list(integer(0))
   
-  
-  # Change to logical argument for the lapply function
-  holding_matrix <- holding_matrix == 1
-  
-  # Return the list of link indices
-  net_list <- as.list(as.data.frame(holding_matrix))
-  net_list_i <- lapply(net_list, which)
-  return(net_list_i)
-  
+  # Return full list of network links
+  return(net_list)
+
 }
+
+
+
+
+# get.net <- function(beta, h, nc = 15){
+#   
+#   # Create a holding matrix to hold the nxn possible contacts
+#   holding_matrix <- matrix(0, nrow = length(beta), ncol = length(beta))
+#   # Matrix of probabilities 
+#   # Each element is the probability of a link being created between person i and person j
+#   # Symmetric Matrix
+#   prob_matrix <- (nc/((mean(beta)^2)*(length(beta)-1)))*(beta%*%t(beta))
+#   
+#   # The probability of creating a link in this way with people in the same household should be 0
+#   # Could remove after rbinom() but might effect the average number of non-household contacts
+#   family_link <- outer(h, h, FUN = "==")
+#   prob_matrix[family_link] = 0
+#   
+#   # As probability matrix is symmetric, only need to consider the probabilities in upper triangle of the probability matrix
+#   # If a connection is made between person i and person j, then theres a link between person j and person i
+#   upper_tri_probs <- prob_matrix[upper.tri(prob_matrix)]
+#   # Given the probabilities of contacts between individuals, use Bernoulli trial for each possible contact to see if link is created
+#   link_vec <- rbinom(length(upper_tri_probs), size = 1, prob = upper_tri_probs)
+#   
+#   # If a link is made between person iand person j, reflect to lower triangle of matrix as there is thereby a link between person j and person i
+#   holding_matrix[upper.tri(holding_matrix)] <- link_vec
+#   holding_matrix <- holding_matrix + t(holding_matrix)
+#   # No link created with oneself
+#   diag(holding_matrix) <- 0
+#   
+#   # Remove any links created between family members
+#   # family_link = outer(h, h, FUN = "==")
+#   # holding_matrix[family_link] = 0
+#   
+#   
+#   # Change to logical argument for the lapply function
+#   holding_matrix <- holding_matrix == 1
+#   
+#   # Return the list of link indices
+#   net_list <- as.list(as.data.frame(holding_matrix))
+#   net_list_i <- lapply(net_list, which)
+#   return(net_list_i)
+#   
+# }
 
 # ---- NSEIR Model ---- 
 
@@ -122,7 +171,7 @@ get.net <- function(beta, h, nc = 15){
 # - pinf: Proportion of the population that are initially infected
 # The output for this function: SEIRt
 # - SEIRt: A list  of vectors S, E, I, R, and t, which give the number of people
-#              in each state by day, and the corresponding days.
+#          in each state by day, and the corresponding days.
 
 nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, 
                   nc = 15, nt = 100, pinf = .005) {
@@ -167,7 +216,6 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       
       # Network
       infected_network_ids <- unlist(lapply(alink[prev_infectious], as.numeric)) # Vector of those in the network of any infected person
-      # infected_network_ids <- infected_network_ids[!is.na(infected_network_ids)]
       if (length(infected_network_ids) > 0) { # Only proceeds if the infected have people in their network(s)
         infected_by_network_count <- tabulate(infected_network_ids, nbins = n) # Counts the number of infected people in each persons network
         alpha_net <- 1 - (1 - alpha[2])^(infected_by_network_count) # Defines each person's probability of infection by their network
@@ -196,7 +244,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
 # ---- Model Visualisation ----
 
 
-# GET NET
+# Plot Output
 # 
 # The inputs for this function: beta, h, alink, alpha, title
 # beta, h, alink, and alpha are the same as the variables used in nseir,
