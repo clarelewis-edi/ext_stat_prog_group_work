@@ -1,18 +1,21 @@
 # ------------------------------------------------------------------------------ 
 # Clare Lewis (s2879721), Grace Sheahan (s2898645), Luke Egan (s2837709)
-
+#
 # Clare: Completed plotting steps and household function, collaborated on
 # other sections
 # Grace: Completed original iteration of nseir function and refined plot
 # function, collaborated on other sections
 # Luke: Completed get net function and refined nseir function, collaborated on
 # other sections
-
+#
 # We all feel that we equally contributed to this project, through a mixture of
 # independent coding and in-person collaboration, roughly completing 1/3 of the
 # work each
-
-#---- Introduction -------------------------------------------------------------
+#
+# Our github repository can be found at;
+# https://github.com/clarelewis-edi/ext_stat_prog_group_work
+#
+# ---- Introduction ------------------------------------------------------------
 # 
 # This project aims to build a SEIR stochastic model of the spread of an epidemic
 # within a population with a rudimentary social structure.
@@ -38,7 +41,7 @@
 
 ## BUILDING THE MODEL ##
 
-# ---- Social Structures ----
+# ---- Social Structures -------------------------------------------------------
 
 # Households #
 
@@ -53,7 +56,7 @@
 # - households: A vector of pop_size length that has an integer value corresponding
 # to each individual that identifies what household they are a member of
 
-build.h <- function(pop_size, hmax=5) {
+build.h <- function(pop_size, hmax = 5) {
   # the outer sample function avoids ordering the population indices by household
   households <- sample(rep(1:pop_size, sample(1:hmax, pop_size, replace = TRUE))[1:pop_size])
   return(households)
@@ -100,8 +103,8 @@ get.net <- function(beta, h, nc = 15){
   link_vec <- rbinom(length(prob_vec), size = 1, prob = prob_vec)
   
   # If a link is made i->j, must account for j->i
-  indivduals_i <- upper_triangle_i[link_vec == 1,1]
-  indivduals_j <- upper_triangle_i[link_vec == 1,2]
+  indivduals_i <- upper_triangle_i[link_vec == 1, 1]
+  indivduals_j <- upper_triangle_i[link_vec == 1, 2]
   # Matrix with two columns which holds all links created i->j and j->i
   all_links <- rbind(cbind(indivduals_i, indivduals_j), cbind(indivduals_j, indivduals_i))
   
@@ -119,7 +122,7 @@ get.net <- function(beta, h, nc = 15){
 
 }
 
-# ---- NSEIR Model ---- 
+# ---- NSEIR Model -------------------------------------------------------------
 
 # NSEIR FUNCTION
 # Function that takes in population and epidemiological factors and models
@@ -229,7 +232,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   return(SEIRt)
 }
 
-# ---- Model Visualisation ----
+# ---- Model Visualisation -----------------------------------------------------
 
 
 # PLOT OUTPUT:
@@ -243,18 +246,18 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
 # Output: 
 # - A plot showing the model results
 
-plot.output <- function(beta,h,alink,alpha,delta=.2,gamma=.4,nc=15,nt = 100,
-                        pinf = .005, title="NSEIR Model") {
+plot.output <- function(beta, h, alink, alpha, delta = .2, gamma = .4, nc = 15,
+                        nt = 100, pinf = .005, title = "NSEIR Model") {
   # Define epi as a run of the nseir model
-  epi <- nseir(beta,h,alink,alpha,delta,gamma,nc,nt,pinf)
+  epi <- nseir(beta, h, alink, alpha, delta, gamma, nc, nt, pinf)
   # First, plot the susceptible population (gray) and set up some parameters
   # for the plots
-  plot(epi$S,type="l",ylim=c(0,max(epi$S)),
+  plot(epi$S, type = "l", ylim = c(0, max(epi$S)),
        # Title from function input, manual axis labels, and adjust line width
-       main=title,xlab="",ylab="Population",col="gray11", lwd = 2)
-  points(epi$E,type="l",col="dodgerblue", lwd = 2) # Plot exposed population (blue)
-  points(epi$I,type="l",col="firebrick", lwd = 2) # Plot infected population (red)
-  points(epi$R,type="l",col="green4", lwd = 2) # Plot recovered population (green)
+       main = title, xlab = "", ylab = "Population", col = "gray11", lwd = 2)
+  points(epi$E, type = "l", col="dodgerblue", lwd = 2) # Plot exposed population (blue)
+  points(epi$I, type = "l", col="firebrick", lwd = 2) # Plot infected population (red)
+  points(epi$R, type = "l", col="green4", lwd = 2) # Plot recovered population (green)
   # Add grid lines to improve readability
   grid(nx = NULL, ny = NULL,
        lty = 2,
@@ -262,14 +265,14 @@ plot.output <- function(beta,h,alink,alpha,delta=.2,gamma=.4,nc=15,nt = 100,
        lwd = .5) 
   legend(x="right",
          legend = c("Susceptible", "Exposed", "Infected", "Recovered"),
-         bty='n',
-         lty=1,
+         bty = 'n',
+         lty = 1,
          lwd = 2, seg.len = 1, cex = .75, # symbol and size of legend
          col = c("gray11","dodgerblue","firebrick", "green4"),
          )
   # manually add x axis label to have the ability to adjust the spacing between
   # the axis and the label
-  title(xlab="Day", line=1.75)
+  title(xlab = "Day", line = 1.75)
 }
 
 # ---- Running the Model  ----
@@ -282,17 +285,43 @@ alink <- get.net(runif(pop_size),h,nc = 15) # Building social networks
 beta_constant <- rep(sum(beta)/length(beta), length(beta)) # Defining constant beta
 # Set plot window up for multiple plots, adjust margins, rotate axes labels to
 # be horizontal
-par(mfrow=c(2,2), mar=c(4,4,2,1), las = 1) 
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1), las = 1) 
 
 # Run 1: Default parameters
 plot.output(beta,h,alink,alpha=c(.1,.01,.01), title = "Full Model") 
 # Run 2: Random mixing only
-plot.output(beta,h,alink,alpha=c(0,0,.04), title = "Only Random Mixing")
+plot.output(beta,h,alink,alpha=c(0, 0, .04), title = "Only Random Mixing")
 # Run 3: Set a constant beta
-plot.output(beta = beta_constant,h,alink,alpha=c(.1,.01,.01),
+plot.output(beta = beta_constant,h,alink,alpha=c(.1, .01, .01),
             title = "Full Model with Constant Beta") 
 # Run 4: Constant beta and random mixing
-plot.output(beta = beta_constant,h,alink,alpha=c(0,0,.04),
+plot.output(beta = beta_constant,h,alink,alpha=c(0, 0, .04),
             title = "Constant Beta and Random Mixing") 
 
 
+# ---- Model Commentary --------------------------------------------------------
+# 
+# As seen on the plots, removing the household and network structures from the
+# model affects the predicted rate and total cases of infection. Under only
+# random mixing, the epidemic progresses quicker and peaks sooner, at a greater
+# proportion of the population as seen by the higher peaks of exposed and infected
+# occurring earlier along the x-axis. However as a result of this, long term 
+# there are fewer total cases and the outbreak ends sooner.
+# 
+# Assuming that accounting for societal structures (household and social networks) 
+# is more accurate, this means that in practical application, failing to account
+# for such factors results in underestimation of the severity of the epidemic, but
+# overestimation of the surges.
+# 
+# Overestimating surges could result in authorities overcompensating for these, with
+# misallocation of resources or over-extreme measures (such as lockdowns) both of
+# which could have societal and economic cost that outweigh the costs of the actual
+# spread of the infection.
+# 
+# Underestimating cases, or underestimating the duration of the outbreak
+# as occurs for the total under random mixing also poses risk. If predicted to be
+# over too early, public health measures could be relaxed too early, potentially
+# resulting in a fresh surge and more severe long term outcomes. Underestimating
+# total cases could result in inadequate long-term public health measures, such as
+# under allocation of resources for dealing with lasting effects of the infection 
+# and inaccurate estimation of those still susceptible in the case of future outbreaks.
