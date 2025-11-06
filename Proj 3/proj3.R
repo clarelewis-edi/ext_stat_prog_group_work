@@ -1,7 +1,7 @@
 #### ---- Q1 Computing Xtilde, X and S -----------------------------------------
 library(splines)
 getwd()
-setwd("C:\\Users\\Luke Egan\\OneDrive\\Desktop\\Extended Statistical Programming\\Practical 3")
+#setwd("C:\\Users\\Luke Egan\\OneDrive\\Desktop\\Extended Statistical Programming\\Practical 3")
 dat <- read.table("engcov.txt", header = T, stringsAsFactors = T)
 
 dat
@@ -49,11 +49,11 @@ spline_func <- function(dat, K){
   
 }
 
-
 #### ---- Q2 ---- ####
 K <- 80
-gamma01 <- rep(log(1), K)
-gamma02 <- rep(log(mean(dat$deaths) / K), K)
+list1 <- spline_func(dat, K)
+#gamma01 <- rep(log(1), K)
+gamma02 <- matrix(log(mean(dat$nhs) / K), K)
 
 
 y <- dat$nhs
@@ -65,45 +65,45 @@ lambda <- 5e-5
 beta0 <- exp(gamma02)
 mu0 <- list1$X %*% beta0
 mu0
-class(d_penalty)
 
 # Dropped factorial as independent of parameter of interest. As said in pg 2
-log_lik <- function(beta0){
-  mu0 <- X %*% beta0
-  log_lik <- y * log(mu0) - mu0 
+log_lik <- function(beta){
+  mu0 <- X %*% beta
+  log_lik <- sum( y*log(mu0) - mu0)
   return(log_lik)
 }
+log_lik(beta0)
 
-penalty <- function(beta0){
-  penalty <- (lambda * t(beta0) %*% (S %*% beta0)) / 2
-  return(as.vector(penalty))
-  
-  
+penalty <- function(beta){
+  penalty <- (lambda * t(beta) %*% (S %*% beta)) / 2
+  return(penalty)
 }
-d_log_lik <- function(beta0){
-  mu0 <- X %*% beta0
-  d_log_lik <- diag(as.vector((y / (mu0 - 1))))
+penalty(beta0)
+
+d_log_lik <- function(beta){
+  mu <- X %*% beta
+  d_log_lik <- diag(as.vector(y / mu - 1)) %*% X %*% diag(beta)
   return(d_log_lik)
 }
+d_log_lik(beta0)
 
-
-d_penalty <- function(beta0){
-  d_penalty <- as.vector(diag(beta0) %*% (S %*% beta0))
+d_penalty <- function(beta){
+  d_penalty <- as.vector(diag(beta) %*% (S %*% beta))
   return(as.vector(d_penalty))
+}
+d_penalty(beta0)
+
+optim_func <- function(beta){
+  return(-log_lik(beta) + penalty(beta))
   
 }
 
-optim_func <- function(beta0){
-  return(-log_lik(beta0) + penalty(beta0))
-  
-}
-
-optim_grad <- function(beta0){
-  return(-1 * d_log_lik(beta0) + d_penalty(beta0))
+optim_grad <- function(beta){
+  return(-1 * d_log_lik(beta) + d_penalty(beta))
   
 }
 
 penalty(beta0)
 
 
-optim(beta0, fn = optim_func(beta0), gr <- optim_grad(beta0))
+optim(par = beta0, fn = optim_func, gr = optim_grad, method = 'BFGS')
