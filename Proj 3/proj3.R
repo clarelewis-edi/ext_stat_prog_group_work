@@ -4,7 +4,7 @@ getwd()
 setwd("C:\\Users\\Luke Egan\\OneDrive\\Desktop\\Extended Statistical Programming\\Practical 3")
 dat <- read.table("engcov.txt", header = T, stringsAsFactors = T)
 
-
+dat
 spline_func <- function(dat, K){
   # Probability function for days from infection until death
   d <- 1:K
@@ -48,3 +48,62 @@ spline_func <- function(dat, K){
   return(spline_mats)
   
 }
+
+
+#### ---- Q2 ---- ####
+K <- 80
+gamma01 <- rep(log(1), K)
+gamma02 <- rep(log(mean(dat$deaths) / K), K)
+
+
+y <- dat$nhs
+n <- nrow(dat)
+X <- list1$X
+S <- list1$S
+lambda <- 5e-5
+
+beta0 <- exp(gamma02)
+mu0 <- list1$X %*% beta0
+mu0
+class(d_penalty)
+
+# Dropped factorial as independent of parameter of interest. As said in pg 2
+log_lik <- function(beta0){
+  mu0 <- X %*% beta0
+  log_lik <- y * log(mu0) - mu0 
+  return(log_lik)
+}
+
+penalty <- function(beta0){
+  penalty <- (lambda * t(beta0) %*% (S %*% beta0)) / 2
+  return(as.vector(penalty))
+  
+  
+}
+d_log_lik <- function(beta0){
+  mu0 <- X %*% beta0
+  d_log_lik <- diag(as.vector((y / (mu0 - 1))))
+  return(d_log_lik)
+}
+
+
+d_penalty <- function(beta0){
+  d_penalty <- as.vector(diag(beta0) %*% (S %*% beta0))
+  return(as.vector(d_penalty))
+  
+}
+
+optim_func <- function(beta0){
+  return(-log_lik(beta0) + penalty(beta0))
+  
+}
+
+optim_grad <- function(beta0){
+  return(-1 * d_log_lik(beta0) + d_penalty(beta0))
+  
+}
+
+penalty(beta0)
+
+
+optim(beta0, fn = optim_func(beta0), gr <- optim_grad(beta0))
