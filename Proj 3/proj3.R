@@ -1,12 +1,10 @@
 #### ---- Q1 Computing Xtilde, X and S -----------------------------------------
 library(splines)
-getwd()
-#setwd("C:\\Users\\Luke Egan\\OneDrive\\Desktop\\Extended Statistical Programming\\Practical 3")
 dat <- read.table("engcov.txt", header = T, stringsAsFactors = T)
 
-dat
+
 spline_func <- function(dat, K){
-  # Probability function for days from infection until death
+  # Probability function for days from infection until deah
   d <- 1:K
   edur <- 3.151
   sdur <- 0.469
@@ -23,22 +21,30 @@ spline_func <- function(dat, K){
   
   knots <- c(lower_ks, ks, upper_ks)
   
-  Xtilde <- splineDesign(knots, (min(dat$julian)-30):max(dat$julian) , outer.ok = T)
+  Xtilde <- splineDesign(knots, (min(dat$julian)-30):max(dat$julian))
   
   
-  # X
-  n <- nrow(dat)
+  n<- nrow(dat)
   X <- matrix(0, n, K)
+  # 
+  # X
+  # n <- nrow(dat)
+  # X <- matrix(0, n, K)
   for(i in 1:n){
     
-    j_upper <- min(29 + i, 80)
+    first_row <- max(1, i - 50)
+    last_row <- min(29 + i, 80 + first_row - 1)
     
-    for(j in 1:j_upper){
-      if((30 + i -j) <= n){
-        X[i,] <- X[i,] + (Xtilde[30 + i - j,] * pd[j])
-      }
-    }
+    X[i,] <- colSums(Xtilde[first_row:last_row, ] * pd[(last_row - first_row + 1):1] )
   }
+  # 
+  #   j_upper <- min(29 + i, 80)
+  # 
+  #   for(j in 1:j_upper){
+  #     if((30 + i -j) <= n){
+  #       X[i,] <- X[i,] + (Xtilde[30 + i - j,] * pd[j])
+  #     }
+  #   }
   
   # S
   S <- crossprod(diff(diag(K), diff = 2))
@@ -49,61 +55,162 @@ spline_func <- function(dat, K){
   
 }
 
-#### ---- Q2 ---- ####
-K <- 80
-list1 <- spline_func(dat, K)
-#gamma01 <- rep(log(1), K)
-gamma02 <- matrix(log(mean(dat$nhs) / K), K)
+list1 <- spline_func(dat, K = 80)
 
+
+
+
+#### ---- Q(2) ---- ####
+
+K <- 80
+gamma0 <- rep(log(mean(dat$deaths) / K), K)
+beta0 <- exp(gamma0)
 
 y <- dat$nhs
 n <- nrow(dat)
 X <- list1$X
 S <- list1$S
-lambda <- 5e-5
+lambda0 <- 5e-7
 
-beta0 <- exp(gamma02)
-mu0 <- list1$X %*% beta0
-mu0
 
 # Dropped factorial as independent of parameter of interest. As said in pg 2
-log_lik <- function(beta){
-  mu0 <- X %*% beta
-  log_lik <- sum( y*log(mu0) - mu0)
-  return(log_lik)
-}
-log_lik(beta0)
 
-penalty <- function(beta){
-  penalty <- (lambda * t(beta) %*% (S %*% beta)) / 2
-  return(penalty)
-}
-penalty(beta0)
-
-d_log_lik <- function(beta){
+optim_func <- function(gamma, X, S, lambda){
+  beta <- exp(gamma)
   mu <- X %*% beta
-  d_log_lik <- diag(as.vector(y / mu - 1)) %*% X %*% diag(beta)
-  return(d_log_lik)
-}
-d_log_lik(beta0)
-
-d_penalty <- function(beta){
-  d_penalty <- as.vector(diag(beta) %*% (S %*% beta))
-  return(as.vector(d_penalty))
-}
-d_penalty(beta0)
-
-optim_func <- function(beta){
-  return(-log_lik(beta) + penalty(beta))
+  
+  log_lik <- sum(y * log(mu) - mu)
+  penalty <- 0.5 * (lambda * t(beta) %*% (S %*% beta))
+  
+  val <- -log_lik + penalty
+  return(as.numeric(val))
   
 }
 
-optim_grad <- function(beta){
-  return(-1 * d_log_lik(beta) + d_penalty(beta))
+optim_grad <- function(gamma, X, S, lambda){
+  beta <- exp(gamma)
+  mu <- X %*% beta
+  
+  d_log_lik <- apply(diag((as.vector(y/mu - 1))) %*% X %*% diag(beta), 2, sum)
+  d_penalty <- lambda * as.vector(diag(beta) %*% (S %*% beta))
+  
+  val <- -d_log_lik + d_penalty
+  return(val)
+}
+
+
+optim_vals <- optim(gamma0, optim_func, optim_grad, X = X, S = S, lambda = lambda0, method = "BFGS")
+
+
+##### Finite Differencing
+
+eps <- 5e-7
+gamma0 <- rep(log(mean(dat$deaths) / K), K)
+grad <- optim_grad(gamma0, X, S, lambda)
+
+
+holding = numeric(80)
+for(i in 1:length(gamma0)){
+  gamma1 <- gamma0
+  gamma1[i] <- gamma0[i] + eps
+  optim_func0 <- optim_func(gamma0, X, S, lambda = lambda0)
+  optim_func1 <- optim_func(gamma1, X, S, lambda = lambda0)
+  holding[i] <- (optim_func1 - optim_func0)/eps
+  print(holding[i]-grad[i])
   
 }
 
-penalty(beta0)
+
+#### Q3 #####
+beta_vals <- exp(optim_vals$par)
+Xtilde <- list1$Xtilde
+mu <- X %*% beta_vals
+t <- (min(dat$julian)-30):max(dat$julian)
+f <- Xtilde %*% beta_vals
 
 
-optim(par = beta0, fn = optim_func, gr = optim_grad, method = 'BFGS')
+dev.off()
+
+
+ggplot() +
+  geom_line(
+    data = data.frame(t = t, f = f),
+    aes(x = t, y = f, colour = "Infection curve f(t)"),
+    size = 1
+  ) +
+  
+  geom_point(
+    data = data.frame(julian = dat$julian, mu = mu),
+    aes(x = julian, y = mu, colour = "Fitted deaths μ"),
+    size = 2, alpha = 0.7
+  ) +
+  
+  geom_point(
+    data = data.frame(julian = dat$julian, nhs = dat$nhs),
+    aes(x = julian, y = nhs, colour = "Observed deaths"),
+    size = 2
+  ) +
+  
+  labs(
+    x = "Day of Year (2020)",
+    y = "Count",
+    colour = "",
+    title = "Daily COVID Deaths and Estimated Infection Curve"
+  ) +
+  
+  scale_colour_manual(values = c(
+    "Infection curve f(t)" = "#1f78b4",
+    "Fitted deaths μ" = "black",
+    "Observed deaths" = "red"
+  )) +
+  
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(face = "bold")
+  )
+
+
+
+
+#### Q4 ####
+min_BIC <- function(gamma0, X, S, y, lambda_vals){
+  BIC_vals <- c()
+  
+  for(i in seq_along(lambda_vals)){
+    
+    optim_vals <- optim(gamma0, optim_func, optim_grad, X = X, S = S, lambda = lambda_vals[i], method = "BFGS")
+    gamma0 <- optim_vals$par
+    beta_vals <- exp(gamma0)
+    mu <- X %*% beta_vals
+    
+    W <- diag(as.vector(y/(mu^2)))
+    H0 <- t(X) %*% (W %*% X)
+    H_lambda <- H0 + lambda_vals[i]*S
+    EDF <- sum(diag(solve(H_lambda, H0)))
+    
+    log_lik <- sum(y * log(mu) - mu)
+    
+    n <- nrow(X)
+    
+    BIC_vals[i] <- -2*log_lik + log(n)*EDF
+    
+  }
+  ii_min_BIC <- which.min(BIC_vals)
+  opt_lambda <- lambda_vals[ii_min_BIC]
+  return(opt_lambda)
+}
+gamma0 <- rep(log(mean(dat$deaths) / K), K)
+lambda_vals <- exp(seq(-13, -7, length = 50))
+
+opt_lambda <- min_BIC(gamma0, X, S, y, lambda_vals)
+opt_lambda
+
+optim_vals <- optim(gamma0, optim_func, optim_grad, X = X, S = S, lambda = opt_lambda, method = "BFGS")
+optim_vals
+
+# install.packages("matrixcalc")
+# library(matrixcalc)
+# is.symmetric.matrix(H_lambda)
+# is.positive.definite(H_lambda)
+# Probably should use QR-decomp
