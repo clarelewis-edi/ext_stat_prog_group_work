@@ -1,3 +1,29 @@
+# ------------------------------------------------------------------------------ 
+# Clare Lewis (s2879721), Grace Sheahan (s2898645), Luke Egan (s2837709)
+#
+# Clare: 
+# Grace: 
+# Luke: 
+#
+# We all feel that we equally contributed to this project, primarily through 
+# in-person collaboration along with some independent coding, roughly completing 
+# 1/3 of the work each
+#
+# Our github repository can be found at;
+# https://github.com/clarelewis-edi/ext_stat_prog_group_work
+#
+# ---- Introduction ------------------------------------------------------------
+# 
+# This project works with the provided data set 'engcov.txt' on deaths from Covid-19
+# in English hospitals against the day of year and aims to use this data to infer
+# a model of the new infections per day which resulted in these deaths.
+
+# The 'engcov.txt' file contains records on 150 days of deaths (150 rows of data)
+# and contains 5 columns; "date", "deaths", "julian", "gov", "nhs".
+# Date - Date for which the death rates were collected
+# Julian - The day of the year corresponding to the date
+# Deaths/NHS - These rows contain equivalent 
+
 #### ---- Q1 Computing Xtilde, X and S -----------------------------------------
 #set.seed(3)
 library(splines)
@@ -35,10 +61,10 @@ spline_func <- function(dat, K){
   # X <- matrix(0, n, K)
   for(i in 1:n){
     
-    first_row <- max(1, i - 50)
-    last_row <- min(29 + i, 80 + first_row - 1)
+    lower <- max(1, i - 50)
+    upper <- min(29 + i, 80 + lower - 1)
     
-    X[i,] <- colSums(Xtilde[first_row:last_row, ] * pd[(last_row - first_row + 1):1] )
+    X[i,] <- colSums(Xtilde[lower:upper, ] * pd[(upper - lower + 1):1])
   }
   # 
   #   j_upper <- min(29 + i, 80)
@@ -173,8 +199,7 @@ ggplot() +
 
 #### Q4 ####
 min_BIC <- function(gamma, X, S, y, lambda_vals){
-  BIC_vals <- c()
-  
+  BIC_val <- 1000 
   for(i in seq_along(lambda_vals)){
     
     optim_vals <- optim(gamma, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda_vals[i], method = "BFGS")
@@ -192,11 +217,16 @@ min_BIC <- function(gamma, X, S, y, lambda_vals){
     
     n <- nrow(X)
     
-    BIC_vals[i] <- -2*log_lik + log(n)*EDF
+    BIC_val <- min(BIC_val, -2*log_lik + log(n)*EDF)
+    
+    if (BIC_val == (-2*log_lik + log(n)*EDF)){
+      opt_lambda <- lambda_vals[i]
+    }
+    
     
   }
-  ii_min_BIC <- which.min(BIC_vals)
-  opt_lambda <- lambda_vals[ii_min_BIC]
+  #ii_min_BIC <- which.min(BIC_vals)
+  #opt_lambda <- lambda_vals[ii_min_BIC]
   return(opt_lambda)
 }
 
