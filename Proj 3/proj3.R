@@ -104,7 +104,7 @@ optim_grad <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
   beta <- exp(gamma)
   mu <- X %*% beta
   
-  d_log_lik <- apply((diag(as.vector(y/mu - 1)) %*% X %*% diag(beta))*weights, 2, sum)
+  d_log_lik <- apply(((as.vector(y/mu - 1)) * t(beta * t(X)) * weights), 2, sum)
   d_penalty <- lambda * as.vector(diag(beta) %*% (S %*% beta))
   
   val <- -d_log_lik + d_penalty
@@ -116,9 +116,7 @@ optim_grad <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
 eps <- 5e-7
 
 # just calling grad function
-#start <- Sys.time()
 grad <- optim_grad(y, gamma0, X, S, lambda0) # only used in finite diff
-#Sys.time() - start
 
 est_grad <- numeric(80)
 for(i in 1:length(gamma0)){
@@ -212,9 +210,7 @@ min_BIC <- function(gamma, X, S, y, lambda_vals){
 lambda_vals <- exp(seq(-13, -7, length = 50))
 lambda_hat <- min_BIC(gamma0, X, S, y, lambda_vals)
 
-start <- Sys.time()
 optim_vals_2 <- optim(gamma0, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda_hat, method = "BFGS")
-Sys.time() - start
 # updated values based on new optimisation
 gamma_hat <- optim_vals_2$par
 beta_hat <- exp(gamma_hat)
@@ -228,7 +224,6 @@ n <- nrow(dat)
 nb <- 200
 f_b <- matrix(0, nb, length(f))
 
-start <- Sys.time()
 for (i in 1:nb){
   wb <- tabulate(sample(n,replace=TRUE),n) ## non-para bootstrap weights
   optim_vals_b <- optim(gamma0, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda_hat, weights = wb, method = "BFGS")
@@ -236,7 +231,6 @@ for (i in 1:nb){
   beta_hat_b <- exp(gamma_hat_b)
   f_b[i,] <- Xtilde %*% beta_hat_b
 }
-Sys.time() - start
 
 f_b_limits <- apply(f_b, 2, quantile, probs = c(0.025, 0.95))
 
