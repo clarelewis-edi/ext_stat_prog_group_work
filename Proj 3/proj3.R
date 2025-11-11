@@ -74,12 +74,10 @@ spline_func <- function(dat, K){
   
 }
 
+K <- 80
 splines <- spline_func(dat, K = 80)
 
 #### ---- Q(2) ---- ####
-
-K <- 80
-#gamma0 <- rep(log(mean(dat$deaths) / K), K)
 gamma0 <- rep(0,K)
 beta0 <- exp(gamma0)
 
@@ -92,10 +90,10 @@ lambda0 <- 5e-5
 optim_func <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
   beta <- exp(gamma)
   mu <- X %*% beta
-  
+
   log_lik <- sum((y * log(mu) - mu - lgamma(y + 1)) * weights)
-  penalty <- 0.5 * (lambda * t(beta) %*% (S %*% beta))
-  
+  penalty <- 0.5 * (lambda * crossprod(beta, S %*% beta))
+
   val <- -log_lik + penalty
   return(as.numeric(val))
 }
@@ -125,7 +123,7 @@ for(i in 1:length(gamma0)){
   optim_func0 <- optim_func(y, gamma0, X, S, lambda = lambda0)
   optim_func1 <- optim_func(y, gamma1, X, S, lambda = lambda0)
   est_grad[i] <- (optim_func1 - optim_func0)/eps
-  print(est_grad[i]-grad[i])
+  #print(est_grad[i]-grad[i])
 }
 
 #### Q3 #####
@@ -141,40 +139,40 @@ t <- (min(dat$julian)-30):max(dat$julian)
 f <- Xtilde %*% beta_hat
 
 
-ggplot() +
-  
-  # Plot the fitted deaths (mu)
-  geom_line(
-    aes(x = dat$julian, y = mu, col = 'Fitted Deaths μ'),
-  ) +
-  
-  # Plot the actual observed deaths from our dataset
-  geom_point(
-    aes(x = dat$julian, y = dat$nhs, col = 'Observed Deaths'),
-    size = 2,
-    alpha = .4
-  ) +
-  
-  # Plot the infection curve f(t)
-  geom_line(
-    aes(x = t, y = f, col = 'Infection Curve f(t)'),
-    linewidth = .75
-  ) +
-  
-  # In order to show the legend with the different plots, we put the colour
-  # inside the aes() with the name we want to print and then manually assigning
-  # the colours
-  scale_color_manual(values = c('Infection Curve f(t)' ='royalblue4',
-                                'Fitted Deaths μ' = 'gray11',
-                                'Observed Deaths' = 'firebrick')
-  ) +
-  
-  labs(
-    x = "Day of Year (2020)",
-    y = "Count",
-    title = "Daily COVID Deaths and Estimated Infection Curve",
-    col = "" # we don't need a "colour" label so assigning this as empty
-  )
+# ggplot() +
+#   
+#   # Plot the fitted deaths (mu)
+#   geom_line(
+#     aes(x = dat$julian, y = mu, col = 'Fitted Deaths μ'),
+#   ) +
+#   
+#   # Plot the actual observed deaths from our dataset
+#   geom_point(
+#     aes(x = dat$julian, y = dat$nhs, col = 'Observed Deaths'),
+#     size = 2,
+#     alpha = .4
+#   ) +
+#   
+#   # Plot the infection curve f(t)
+#   geom_line(
+#     aes(x = t, y = f, col = 'Infection Curve f(t)'),
+#     linewidth = .75
+#   ) +
+#   
+#   # In order to show the legend with the different plots, we put the colour
+#   # inside the aes() with the name we want to print and then manually assigning
+#   # the colours
+#   scale_color_manual(values = c('Infection Curve f(t)' ='royalblue4',
+#                                 'Fitted Deaths μ' = 'gray11',
+#                                 'Observed Deaths' = 'firebrick')
+#   ) +
+#   
+#   labs(
+#     x = "Day of Year (2020)",
+#     y = "Count",
+#     title = "Daily COVID Deaths and Estimated Infection Curve",
+#     col = "" # we don't need a "colour" label so assigning this as empty
+#   )
 
 #### Q4 ####
 min_BIC <- function(gamma, X, S, y, lambda_vals){
@@ -202,27 +200,31 @@ min_BIC <- function(gamma, X, S, y, lambda_vals){
     
     if (BIC_val == (-2*log_lik + log(n)*EDF)){
       opt_lambda <- lambda_vals[i]
+      opt_gamma <- optim_gamma
     }
   }
-  return(opt_lambda)
+  hat_params <- list(lambda_hat = opt_lambda, gamma_hat = opt_gamma)
+  return(hat_params)
 }
 
 lambda_vals <- exp(seq(-13, -7, length = 50))
-lambda_hat <- min_BIC(gamma0, X, S, y, lambda_vals)
+hat_params <- min_BIC(gamma_hat, X, S, y, lambda_vals)
+lambda_hat <- hat_params$lambda_hat
+gamma_hat_updated <- hat_params$gamma_hat
 
-optim_vals_2 <- optim(gamma0, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda_hat, method = "BFGS")
+#optim_vals_2 <- optim(gamma_hat, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda_hat, method = "BFGS")
 # updated values based on new optimisation
-gamma_hat <- optim_vals_2$par
-beta_hat <- exp(gamma_hat)
-Xtilde <- splines$Xtilde
-mu <- X %*% beta_hat
+#gamma_hat_updated <- optim_vals_2$par
+beta_hat_updated <- exp(gamma_hat_updated)
+
+mu_updated <- X %*% beta_hat_updated
 t <- (min(dat$julian)-30):max(dat$julian)
-f <- Xtilde %*% beta_hat
+f_updated <- Xtilde %*% beta_hat_updated
 
 # Q5
 n <- nrow(dat)
 nb <- 200
-f_b <- matrix(0, nb, length(f))
+f_b <- matrix(0, nb, length(f_updated))
 
 for (i in 1:nb){
   wb <- tabulate(sample(n,replace=TRUE),n) ## non-para bootstrap weights
@@ -259,7 +261,7 @@ ggplot() +
   
   # Finally add the infection curve f(t) updated with our optimal values 
   geom_line(
-    aes(x = t, y = f, col = 'Infection Curve f(t)'),
+    aes(x = t, y = f_updated, col = 'Infection Curve f(t)'),
     linewidth = .75
   ) +
   
