@@ -26,6 +26,7 @@
 
 #### ---- Q1 Computing Xtilde, X and S -----------------------------------------
 #set.seed(3)
+start <- Sys.time()
 library(splines)
 library(ggplot2)
 #setwd("C:/Users/Grace Sheahan/ext_stat_prog_group_work/Proj 3")
@@ -55,10 +56,7 @@ spline_func <- function(dat, K){
   
   n<- nrow(dat)
   X <- matrix(0, n, K)
-  # 
-  # X
-  # n <- nrow(dat)
-  # X <- matrix(0, n, K)
+  
   for(i in 1:n){
     
     lower <- max(1, i - 50)
@@ -66,14 +64,6 @@ spline_func <- function(dat, K){
     
     X[i,] <- colSums(Xtilde[lower:upper, ] * pd[(upper - lower + 1):1])
   }
-  # 
-  #   j_upper <- min(29 + i, 80)
-  # 
-  #   for(j in 1:j_upper){
-  #     if((30 + i -j) <= n){
-  #       X[i,] <- X[i,] + (Xtilde[30 + i - j,] * pd[j])
-  #     }
-  #   }
   
   # S
   S <- crossprod(diff(diag(K), diff = 2))
@@ -85,9 +75,6 @@ spline_func <- function(dat, K){
 }
 
 splines <- spline_func(dat, K = 80)
-
-
-
 
 #### ---- Q(2) ---- ####
 
@@ -101,9 +88,6 @@ n <- nrow(dat)
 X <- splines$X
 S <- splines$S
 lambda0 <- 5e-5
-#mu <- X %*% beta
-
-# Dropped factorial as independent of parameter of interest. As said in pg 2
 
 optim_func <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
   beta <- exp(gamma)
@@ -114,14 +98,13 @@ optim_func <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
   
   val <- -log_lik + penalty
   return(as.numeric(val))
-  
 }
 
 optim_grad <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
   beta <- exp(gamma)
   mu <- X %*% beta
   
-  d_log_lik <- apply((diag((as.vector(y/mu - 1))) %*% X %*% diag(beta))*weights, 2, sum)
+  d_log_lik <- apply((diag(as.vector(y/mu - 1)) %*% X %*% diag(beta))*weights, 2, sum)
   d_penalty <- lambda * as.vector(diag(beta) %*% (S %*% beta))
   
   val <- -d_log_lik + d_penalty
@@ -131,27 +114,27 @@ optim_grad <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
 ##### Finite Differencing
 
 eps <- 5e-7
-#gamma0 <- rep(log(mean(dat$deaths) / K), K) Already defined
+
 # just calling grad function
+#start <- Sys.time()
 grad <- optim_grad(y, gamma0, X, S, lambda0) # only used in finite diff
+#Sys.time() - start
 
-
-holding <- numeric(80)
+est_grad <- numeric(80)
 for(i in 1:length(gamma0)){
   gamma1 <- gamma0
   gamma1[i] <- gamma0[i] + eps
   optim_func0 <- optim_func(y, gamma0, X, S, lambda = lambda0)
   optim_func1 <- optim_func(y, gamma1, X, S, lambda = lambda0)
-  holding[i] <- (optim_func1 - optim_func0)/eps
-  print(holding[i]-grad[i])
-  
+  est_grad[i] <- (optim_func1 - optim_func0)/eps
+  print(est_grad[i]-grad[i])
 }
 
-
 #### Q3 #####
-# rename initial opt_vals
+# use our optimisation and gradient functions to get the optimal values of gamma
 optim_vals_1 <- optim(gamma0, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda0, method = "BFGS")
 
+# assign variables based on optimisation output
 gamma_hat <- optim_vals_1$par
 beta_hat <- exp(gamma_hat)
 Xtilde <- splines$Xtilde
@@ -159,23 +142,31 @@ mu <- X %*% beta_hat
 t <- (min(dat$julian)-30):max(dat$julian)
 f <- Xtilde %*% beta_hat
 
+
 ggplot() +
-  geom_line(
-    aes(x = t, y = f, col = 'Infection Curve f(t)'),
-    linewidth = .75
-  ) +
   
+  # Plot the fitted deaths (mu)
   geom_line(
     aes(x = dat$julian, y = mu, col = 'Fitted Deaths μ'),
   ) +
   
+  # Plot the actual observed deaths from our dataset
   geom_point(
     aes(x = dat$julian, y = dat$nhs, col = 'Observed Deaths'),
     size = 2,
     alpha = .4
   ) +
   
-  scale_color_manual(values = c('Infection Curve f(t)' ='dodgerblue',
+  # Plot the infection curve f(t)
+  geom_line(
+    aes(x = t, y = f, col = 'Infection Curve f(t)'),
+    linewidth = .75
+  ) +
+  
+  # In order to show the legend with the different plots, we put the colour
+  # inside the aes() with the name we want to print and then manually assigning
+  # the colours
+  scale_color_manual(values = c('Infection Curve f(t)' ='royalblue4',
                                 'Fitted Deaths μ' = 'gray11',
                                 'Observed Deaths' = 'firebrick')
   ) +
@@ -184,18 +175,8 @@ ggplot() +
     x = "Day of Year (2020)",
     y = "Count",
     title = "Daily COVID Deaths and Estimated Infection Curve",
-    col = ""
-  ) +
-  
-  theme_light(
-    base_size = 13
-  ) +
-  
-  theme(
-    legend.position = "top",
-    plot.title = element_text(face = "bold")
-  ) 
-
+    col = "" # we don't need a "colour" label so assigning this as empty
+  )
 
 #### Q4 ####
 min_BIC <- function(gamma, X, S, y, lambda_vals){
@@ -211,7 +192,9 @@ min_BIC <- function(gamma, X, S, y, lambda_vals){
     W <- diag(as.vector(y/(mu^2)))
     H0 <- t(X) %*% (W %*% X)
     H_lambda <- H0 + lambda_vals[i]*S
-    EDF <- sum(diag(solve(H_lambda, H0)))
+    cholesk <- chol(H_lambda)
+    solved <- backsolve(cholesk,forwardsolve(t(cholesk),H0))
+    EDF <- sum(diag(solved))
     
     log_lik <- sum(y * log(mu) - mu)
     
@@ -222,19 +205,16 @@ min_BIC <- function(gamma, X, S, y, lambda_vals){
     if (BIC_val == (-2*log_lik + log(n)*EDF)){
       opt_lambda <- lambda_vals[i]
     }
-    
-    
   }
-  #ii_min_BIC <- which.min(BIC_vals)
-  #opt_lambda <- lambda_vals[ii_min_BIC]
   return(opt_lambda)
 }
 
 lambda_vals <- exp(seq(-13, -7, length = 50))
-
 lambda_hat <- min_BIC(gamma0, X, S, y, lambda_vals)
-optim_vals_2 <- optim(gamma0, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda_hat, method = "BFGS")
 
+start <- Sys.time()
+optim_vals_2 <- optim(gamma0, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda_hat, method = "BFGS")
+Sys.time() - start
 # updated values based on new optimisation
 gamma_hat <- optim_vals_2$par
 beta_hat <- exp(gamma_hat)
@@ -243,18 +223,12 @@ mu <- X %*% beta_hat
 t <- (min(dat$julian)-30):max(dat$julian)
 f <- Xtilde %*% beta_hat
 
-# install.packages("matrixcalc")
-# library(matrixcalc)
-# is.symmetric.matrix(H_lambda)
-# is.positive.definite(H_lambda)
-# Probably should use QR-decomp
-
 # Q5
-#set.seed(3)
 n <- nrow(dat)
 nb <- 200
 f_b <- matrix(0, nb, length(f))
 
+start <- Sys.time()
 for (i in 1:nb){
   wb <- tabulate(sample(n,replace=TRUE),n) ## non-para bootstrap weights
   optim_vals_b <- optim(gamma0, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda_hat, weights = wb, method = "BFGS")
@@ -262,52 +236,67 @@ for (i in 1:nb){
   beta_hat_b <- exp(gamma_hat_b)
   f_b[i,] <- Xtilde %*% beta_hat_b
 }
+Sys.time() - start
 
 f_b_limits <- apply(f_b, 2, quantile, probs = c(0.025, 0.95))
 
 
 ggplot() +
-  geom_line(
-    aes(x = t, y = f, col = 'Infection Curve f(t)'),
-    linewidth = .75
-  ) +
   
+  # We want the confidence intervals to be furthest back on the plot so we plot
+  # those first
+  # confidence intervals determined from bootstrapping
   geom_ribbon(
     aes(x = t, ymin = f_b_limits[1,], ymax = f_b_limits[2,],
         fill = 'Confidence Interval'), alpha = 0.5
   ) +
   
+  # Plot our fitted deaths (mu) next
   geom_line(
     aes(x = dat$julian, y = mu, col = 'Fitted Deaths μ'),
   ) +
   
+  # Add our actual observed deaths on top of that
   geom_point(
     aes(x = dat$julian, y = dat$nhs, col = 'Observed Deaths'),
     size = 2,
     alpha = .4
   ) +
   
-  scale_color_manual(values = c('Infection Curve f(t)' ='dodgerblue',
+  # Finally add the infection curve f(t) updated with our optimal values 
+  geom_line(
+    aes(x = t, y = f, col = 'Infection Curve f(t)'),
+    linewidth = .75
+  ) +
+  
+  # same as previous graph, want to create a legend that includes each plot element
+  # so manually assigning colours here so r will create it
+  scale_color_manual(values = c('Infection Curve f(t)' ='royalblue4',
                                 'Fitted Deaths μ' = 'gray11',
                                 'Observed Deaths' = 'firebrick')
   ) +
   
-  scale_fill_manual(values = 'gray70'
+  # doing the same thing as the manual colour but for the fill of the confidence interva
+  scale_fill_manual(values = 'lightskyblue'
   ) +
   
   labs(
     x = "Day of Year (2020)",
     y = "Count",
     title = "Daily COVID Deaths and Estimated Infection Curve",
+    # in this case we want the colour and fill titles both to be removed
     col = "",
     fill = ""
   ) +
-
+  
+  # change the theme to make the plots easier to read
   theme_light(
     base_size = 13
   ) +
   
+  # Make title bold and move the legend to the top of the graph
   theme(
     legend.position = "top",
     plot.title = element_text(face = "bold")
   ) 
+Sys.time() - start
