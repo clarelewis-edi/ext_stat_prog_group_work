@@ -1,4 +1,4 @@
-# ------------------------------------------------------------------------------ 
+# -----------------------------------------------------------------------------# 
 # Clare Lewis (s2879721), Grace Sheahan (s2898645), Luke Egan (s2837709)
 #
 # Clare: 
@@ -12,7 +12,7 @@
 # Our github repository can be found at;
 # https://github.com/clarelewis-edi/ext_stat_prog_group_work
 #
-# ---- Introduction ------------------------------------------------------------
+# ---- Introduction -----------------------------------------------------------#
 # 
 # This project works with the provided data set 'engcov.txt' on deaths from Covid-19
 # in English hospitals against the day of year and aims to use this data to infer
@@ -22,18 +22,21 @@
 # and contains 5 columns; "date", "deaths", "julian", "gov", "nhs".
 # Date - Date for which the death rates were collected
 # Julian - The day of the year corresponding to the date
-# Deaths/NHS - These rows contain equivalent 
+# Deaths/NHS - These rows contain equivalent data on the number of deaths from Covid
+# reported by the NHS
 
-#### ---- Q1 Computing Xtilde, X and S -----------------------------------------
-#set.seed(3)
+#### ---- Q1 Computing Xtilde, X and S ----------------------------------------#
 start <- Sys.time()
+# Import necessary libraries
 library(splines)
 library(ggplot2)
-#setwd("C:/Users/Grace Sheahan/ext_stat_prog_group_work/Proj 3")
+
+# Read in the dataset
 dat <- read.table("engcov.txt", header = T, stringsAsFactors = T)
 
 # spline_func -----------------------------------------------------------------#
-# Constructs the spline-based matrices used to model the infection to death 
+# Constructs the spline-based matrices that will be used to fit the deconvolution
+# model to the Covid death data
 #
 # Inputs:
 #     - dat: Dataframe containing a column "julian" which contains the days for
@@ -42,6 +45,7 @@ dat <- read.table("engcov.txt", header = T, stringsAsFactors = T)
 #     - K: Total number of spline basis functions
 #
 # Outputs:
+#     List containing:
 #     - Xtilde: Spline basis matrix over the infection times
 #     
 #     - X: Model matrix for deaths
@@ -49,12 +53,11 @@ dat <- read.table("engcov.txt", header = T, stringsAsFactors = T)
 #     - S: Penalty matrix with smoothing parameter for smoother model fit
 spline_func <- function(dat, K){
   
-  #----------------------------------------------------------------------------#
-  # 1. Probability function for days from infection until death                
-  #----------------------------------------------------------------------------#
+  # ---- Probability function for days from infection until death                
   
-  # Probab
-  d <- 1:K
+  # It is given that there is data to suggest that if d is the interval from
+  # infection to death then log(d) ~ N(3.151, 0.469^2)
+  d <- 1:80
   edur <- 3.151
   sdur <- 0.469
   
@@ -63,18 +66,17 @@ spline_func <- function(dat, K){
   # Normalise probabilities
   pd <- pd/sum(pd)
   
-  #----------------------------------------------------------------------------#
-  # 2. Xtilde
-  #----------------------------------------------------------------------------#
-  
+  # ---- Xtilde
+
   # Sequence for inner K-2 knots covering the interval over which f(t) 
-  # is evaluated. This extends to 30 days before first observed death (over the
-  # infection period)
+  # is evaluated. This extends to 30 days before the first observed death (over
+  # the infection period)
   ks <- seq(min(dat$julian) - 30, max(dat$julian), length = K - 2)
   # Interval size between knots
   ks_diff <- ks[2] - ks[1]
   
-  # Add boundary knots to the start and end of the sequence. Allows more 
+  # Add boundary knots to the start and end of the sequence. Accounts for boundary
+  # splines, the tails of which could effect the edge cases
   lower_ks <- ks[1] - (3:1)*ks_diff
   upper_ks <- ks[K-2] + (1:3)*ks_diff
   
@@ -84,48 +86,56 @@ spline_func <- function(dat, K){
   # Matrix of spline coefficients over period of infections 
   Xtilde <- splineDesign(knots, (min(dat$julian)-30):max(dat$julian))
   
-  
-  # X -------------------------------------------------------------------------#
-  
+  # ---- X
+
   # Initialise X
   n <- nrow(dat)
   X <- matrix(0, n, K)
   
   
   for(i in 1:n){
-    
+    # Define the range for the plausible infection period for deaths on day i
     lower <- max(1, i - 50)
     upper <- min(29 + i, 80 + lower - 1)
     
+    # Builds the ith row of the model matrix for the deaths based on the formula given
     X[i,] <- colSums(Xtilde[lower:upper, ] * pd[(upper - lower + 1):1])
   }
   
-  # S
+  # ---- S
+  
+  # Compute the penalty matrix
   S <- crossprod(diff(diag(K), diff = 2))
   
   # Return all important information as a list
-  spline_mats <- list(Xtilde = Xtilde, X = X, S = S, pd = pd, knots = knots)
+  spline_mats <- list(Xtilde = Xtilde, X = X, S = S)
   return(spline_mats)
-  
 }
 
 K <- 80
-splines <- spline_func(dat, K = 80)
+splines <- spline_func(dat, K)
 
-#### ---- Q(2) ---- ####
-gamma0 <- rep(0,K)
-beta0 <- exp(gamma0)
-
-y <- dat$nhs
-n <- nrow(dat)
-X <- splines$X
-S <- splines$S
-lambda0 <- 5e-5
-
-optim_func <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
+# pen_nll ---------------------------------------------------------------------#
+# Calculates the negative penalised log likelihood function
+#
+# Inputs:
+#     - y: number of deaths per day
+#     - X: model matrix for deaths
+#     - S: penalty matrix
+#     - gamma: log of the coefficients of the infection model
+#     - lambda: smoothing parameter
+#     - weights: weighting of the rows of dat (default to all ones except in
+#                the case of bootstrapping)
+#
+# Outputs:
+#     - val: vector of the negative penalised log likelihood values
+# 
+pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
+  # To ensure that beta is positive, it is defined as the exponential of gamma
   beta <- exp(gamma)
   mu <- X %*% beta
-
+  
+  # log likelihood and penalty calculated based on formulas provided
   log_lik <- sum((y * log(mu) - mu - lgamma(y + 1)) * weights)
   penalty <- 0.5 * (lambda * crossprod(beta, S %*% beta))
 
@@ -133,10 +143,20 @@ optim_func <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
   return(as.numeric(val))
 }
 
-optim_grad <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
+# grad_pen_nll ----------------------------------------------------------------#
+# Calculate the gradient function based on the derivatives of the log likelihood
+# and penalty
+#
+# Inputs: Same as pen_nll
+#
+# Outputs:
+#     - val: vector of negative derivative of the penalised log likelihood
+# 
+grad_pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
   beta <- exp(gamma)
   mu <- X %*% beta
   
+  # derivatives of log likelihood and penalty based on formulas provided
   d_log_lik <- apply(((as.vector(y/mu - 1)) * t(beta * t(X)) * weights), 2, sum)
   d_penalty <- lambda * as.vector(diag(beta) %*% (S %*% beta))
   
@@ -144,26 +164,38 @@ optim_grad <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
   return(val)
 }
 
-##### Finite Differencing
+# Finite Differencing ---------------------------------------------------------#
 
+# check comments in notes
 eps <- 5e-7
 
 # just calling grad function
-grad <- optim_grad(y, gamma0, X, S, lambda0) # only used in finite diff
+grad <- grad_pen_nll(y, gamma0, X, S, lambda0) # only used in finite diff
 
 est_grad <- numeric(80)
 for(i in 1:length(gamma0)){
   gamma1 <- gamma0
   gamma1[i] <- gamma0[i] + eps
-  optim_func0 <- optim_func(y, gamma0, X, S, lambda = lambda0)
-  optim_func1 <- optim_func(y, gamma1, X, S, lambda = lambda0)
-  est_grad[i] <- (optim_func1 - optim_func0)/eps
+  pen_nll0 <- pen_nll(y, gamma0, X, S, lambda = lambda0)
+  pen_nll1 <- pen_nll(y, gamma1, X, S, lambda = lambda0)
+  est_grad[i] <- (pen_nll1 - pen_nll0)/eps
   #print(est_grad[i]-grad[i])
 }
 
 #### Q3 #####
+
+# Initial estimate of gamma values
+gamma0 <- rep(0,K)
+
+# Defining values that will be used as inputs in functions
+y <- dat$nhs # number of deaths per day
+n <- nrow(dat) # number of days, over which data is collected
+X <- splines$X # model matrix for deaths
+S <- splines$S # penalty matrix
+lambda0 <- 5e-5 # initial estimate of smoothing parameter
+
 # use our optimisation and gradient functions to get the optimal values of gamma
-optim_vals_1 <- optim(gamma0, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda0, method = "BFGS")
+optim_vals_1 <- optim(gamma0, pen_nll, grad_pen_nll, y = y, X = X, S = S, lambda = lambda0, method = "BFGS")
 
 # assign variables based on optimisation output
 gamma_hat <- optim_vals_1$par
@@ -174,47 +206,48 @@ t <- (min(dat$julian)-30):max(dat$julian)
 f <- Xtilde %*% beta_hat
 
 
-# ggplot() +
-#   
-#   # Plot the fitted deaths (mu)
-#   geom_line(
-#     aes(x = dat$julian, y = mu, col = 'Fitted Deaths μ'),
-#   ) +
-#   
-#   # Plot the actual observed deaths from our dataset
-#   geom_point(
-#     aes(x = dat$julian, y = dat$nhs, col = 'Observed Deaths'),
-#     size = 2,
-#     alpha = .4
-#   ) +
-#   
-#   # Plot the infection curve f(t)
-#   geom_line(
-#     aes(x = t, y = f, col = 'Infection Curve f(t)'),
-#     linewidth = .75
-#   ) +
-#   
-#   # In order to show the legend with the different plots, we put the colour
-#   # inside the aes() with the name we want to print and then manually assigning
-#   # the colours
-#   scale_color_manual(values = c('Infection Curve f(t)' ='royalblue4',
-#                                 'Fitted Deaths μ' = 'gray11',
-#                                 'Observed Deaths' = 'firebrick')
-#   ) +
-#   
-#   labs(
-#     x = "Day of Year (2020)",
-#     y = "Count",
-#     title = "Daily COVID Deaths and Estimated Infection Curve",
-#     col = "" # we don't need a "colour" label so assigning this as empty
-#   )
+ggplot() +
+
+  # Plot the fitted deaths (mu)
+  geom_line(
+    aes(x = dat$julian, y = mu, col = 'Fitted Deaths μ'),
+  ) +
+
+  # Plot the actual observed deaths from our dataset
+  geom_point(
+    aes(x = dat$julian, y = dat$nhs, col = 'Observed Deaths'),
+    size = 2,
+    alpha = .4
+  ) +
+
+  # Plot the infection curve f(t)
+  geom_line(
+    aes(x = t, y = f, col = 'Infection Curve f(t)'),
+    linewidth = .75
+  ) +
+
+  # In order to show the legend with the different plots, we put the colour
+  # inside the aes() with the name we want to print and then manually assigning
+  # the colours
+  scale_color_manual(values = c('Infection Curve f(t)' ='royalblue4',
+                                'Fitted Deaths μ' = 'gray11',
+                                'Observed Deaths' = 'firebrick')
+  ) +
+
+  labs(
+    x = "Day of Year (2020)",
+    y = "Count",
+    title = "Daily COVID Deaths and Estimated Infection Curve",
+    col = "" # we don't need a "colour" label so assigning this as empty
+  )
 
 #### Q4 ####
 min_BIC <- function(gamma, X, S, y, lambda_vals){
   BIC_val <- 1000 
+  bic_holding <- c()
   for(i in seq_along(lambda_vals)){
     
-    optim_vals <- optim(gamma, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda_vals[i], method = "BFGS")
+    optim_vals <- optim(gamma, pen_nll, grad_pen_nll, y = y, X = X, S = S, lambda = lambda_vals[i], method = "BFGS")
     # is it bad practice to redefine an input variable
     optim_gamma <- optim_vals$par
     optim_beta <- exp(optim_gamma)
@@ -223,34 +256,36 @@ min_BIC <- function(gamma, X, S, y, lambda_vals){
     W <- diag(as.vector(y/(mu^2)))
     H0 <- t(X) %*% (W %*% X)
     H_lambda <- H0 + lambda_vals[i]*S
-    cholesk <- chol(H_lambda)
-    solved <- backsolve(cholesk,forwardsolve(t(cholesk),H0))
-    EDF <- sum(diag(solved))
+    #cholesk <- chol(H_lambda)
+    #solved <- backsolve(cholesk,forwardsolve(t(cholesk),H0))
+    H_lambda <- H0 + lambda_vals[i]*S
+    EDF <- sum(diag(solve(H_lambda, H0)))
     
     log_lik <- sum(y * log(mu) - mu)
     
     n <- nrow(X)
     
-    BIC_val <- min(BIC_val, -2*log_lik + log(n)*EDF)
+    #BIC_val <- min(BIC_val, -2*log_lik + log(n)*EDF)
+    bic_holding[i] <- -2*log_lik + log(n)*EDF
     
-    if (BIC_val == (-2*log_lik + log(n)*EDF)){
-      opt_lambda <- lambda_vals[i]
-      opt_gamma <- optim_gamma
-    }
+    #if (BIC_val == (-2*log_lik + log(n)*EDF)){
+    #  opt_lambda <- lambda_vals[i]
+    #  opt_gamma <- optim_gamma
+    #}
   }
-  hat_params <- list(lambda_hat = opt_lambda, gamma_hat = opt_gamma)
-  return(hat_params)
+  #hat_params <- list(lambda_hat = opt_lambda, gamma_hat = opt_gamma)
+  #return(hat_params)
+  return(bic_holding)
 }
 
 lambda_vals <- exp(seq(-13, -7, length = 50))
 hat_params <- min_BIC(gamma_hat, X, S, y, lambda_vals)
 lambda_hat <- hat_params$lambda_hat
 gamma_hat_updated <- hat_params$gamma_hat
-
-#optim_vals_2 <- optim(gamma_hat, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda_hat, method = "BFGS")
-# updated values based on new optimisation
-#gamma_hat_updated <- optim_vals_2$par
 beta_hat_updated <- exp(gamma_hat_updated)
+
+
+plot(min_BIC(gamma_hat, X, S, y, lambda_vals), type='l')
 
 mu_updated <- X %*% beta_hat_updated
 t <- (min(dat$julian)-30):max(dat$julian)
@@ -263,7 +298,7 @@ f_b <- matrix(0, nb, length(f_updated))
 
 for (i in 1:nb){
   wb <- tabulate(sample(n,replace=TRUE),n) ## non-para bootstrap weights
-  optim_vals_b <- optim(gamma0, optim_func, optim_grad, y = y, X = X, S = S, lambda = lambda_hat, weights = wb, method = "BFGS")
+  optim_vals_b <- optim(gamma0, pen_nll, grad_pen_nll, y = y, X = X, S = S, lambda = lambda_hat, weights = wb, method = "BFGS")
   gamma_hat_b <- optim_vals_b$par
   beta_hat_b <- exp(gamma_hat_b)
   f_b[i,] <- Xtilde %*% beta_hat_b
