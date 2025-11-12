@@ -316,7 +316,7 @@ min_BIC <- function(gamma, X, S, y, log_lambda_vals){
 log_lambda_vals <- seq(-13, -7, length = 50)
 
 # Run and store output of min_BIC, and extract optimal lambda and gamma
-hat_params <- min_BIC(gamma_hat, X, S, y, lambda_vals)
+hat_params <- min_BIC(gamma_hat, X, S, y, log_lambda_vals)
 lambda_hat <- hat_params$lambda_hat
 gamma_hat_updated <- hat_params$gamma_hat
 beta_hat_updated <- exp(gamma_hat_updated) # Calculate optimal beta
