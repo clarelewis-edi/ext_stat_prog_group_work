@@ -244,38 +244,34 @@ ggplot() +
 #### Q4 ####
 min_BIC <- function(gamma, X, S, y, lambda_vals){
   BIC_val <- 1000 
-  bic_holding <- c()
   for(i in seq_along(lambda_vals)){
     
     optim_vals <- optim(gamma, pen_nll, grad_pen_nll, y = y, X = X, S = S, lambda = lambda_vals[i], method = "BFGS")
-    # is it bad practice to redefine an input variable
     optim_gamma <- optim_vals$par
+    gamma <- optim_gamma
     optim_beta <- exp(optim_gamma)
     mu <- X %*% optim_beta
     
     W <- diag(as.vector(y/(mu^2)))
     H0 <- t(X) %*% (W %*% X)
     H_lambda <- H0 + lambda_vals[i]*S
-    #cholesk <- chol(H_lambda)
-    #solved <- backsolve(cholesk,forwardsolve(t(cholesk),H0))
-    H_lambda <- H0 + lambda_vals[i]*S
+    cholesk <- chol(H_lambda)
+    solved <- backsolve(cholesk,forwardsolve(t(cholesk),H0))
     EDF <- sum(diag(solve(H_lambda, H0)))
     
     log_lik <- sum(y * log(mu) - mu)
     
     n <- nrow(X)
     
-    #BIC_val <- min(BIC_val, -2*log_lik + log(n)*EDF)
-    bic_holding[i] <- -2*log_lik + log(n)*EDF
-    
-    #if (BIC_val == (-2*log_lik + log(n)*EDF)){
-    #  opt_lambda <- lambda_vals[i]
-    #  opt_gamma <- optim_gamma
-    #}
+    BIC_val <- min(BIC_val, -2*log_lik + log(n)*EDF)
+
+    if (BIC_val == (-2*log_lik + log(n)*EDF)){
+     opt_lambda <- lambda_vals[i]
+     opt_gamma <- optim_gamma
+    }
   }
-  #hat_params <- list(lambda_hat = opt_lambda, gamma_hat = opt_gamma)
-  #return(hat_params)
-  return(bic_holding)
+  hat_params <- list(lambda_hat = opt_lambda, gamma_hat = opt_gamma)
+  return(hat_params)
 }
 
 lambda_vals <- exp(seq(-13, -7, length = 50))
@@ -283,9 +279,6 @@ hat_params <- min_BIC(gamma_hat, X, S, y, lambda_vals)
 lambda_hat <- hat_params$lambda_hat
 gamma_hat_updated <- hat_params$gamma_hat
 beta_hat_updated <- exp(gamma_hat_updated)
-
-
-plot(min_BIC(gamma_hat, X, S, y, lambda_vals), type='l')
 
 mu_updated <- X %*% beta_hat_updated
 t <- (min(dat$julian)-30):max(dat$julian)
@@ -304,7 +297,7 @@ for (i in 1:nb){
   f_b[i,] <- Xtilde %*% beta_hat_b
 }
 
-f_b_limits <- apply(f_b, 2, quantile, probs = c(0.025, 0.95))
+f_b_limits <- apply(f_b, 2, quantile, probs = c(0.025, 0.975))
 
 
 ggplot() +
