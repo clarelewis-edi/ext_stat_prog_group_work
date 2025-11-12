@@ -392,7 +392,7 @@ ggplot() +
     y = "Count",
     title = "Daily COVID Deaths and Estimated Infection Curve",
     # Removing the colour and fill titles by leaving blank
-    col = ""
+    col = "",
     fill = ""
   ) +
   
