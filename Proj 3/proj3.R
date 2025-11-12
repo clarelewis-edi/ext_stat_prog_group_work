@@ -32,30 +32,65 @@ library(ggplot2)
 #setwd("C:/Users/Grace Sheahan/ext_stat_prog_group_work/Proj 3")
 dat <- read.table("engcov.txt", header = T, stringsAsFactors = T)
 
-
+# spline_func -----------------------------------------------------------------#
+# Constructs the spline-based matrices used to model the infection to death 
+#
+# Inputs:
+#     - dat: Dataframe containing a column "julian" which contains the days for
+#            observed deaths
+#
+#     - K: Total number of spline basis functions
+#
+# Outputs:
+#     - Xtilde: Spline basis matrix over the infection times
+#     
+#     - X: Model matrix for deaths
+#
+#     - S: Penalty matrix with smoothing parameter for smoother model fit
 spline_func <- function(dat, K){
-  # Probability function for days from infection until deah
+  
+  #----------------------------------------------------------------------------#
+  # 1. Probability function for days from infection until death                
+  #----------------------------------------------------------------------------#
+  
+  # Probab
   d <- 1:K
   edur <- 3.151
   sdur <- 0.469
   
+  # Calculate model probability of each fatal disease duration for each day
   pd <- dlnorm(d, edur, sdur)
+  # Normalise probabilities
   pd <- pd/sum(pd)
   
-  # Xtilde
+  #----------------------------------------------------------------------------#
+  # 2. Xtilde
+  #----------------------------------------------------------------------------#
+  
+  # Sequence for inner K-2 knots covering the interval over which f(t) 
+  # is evaluated. This extends to 30 days before first observed death (over the
+  # infection period)
   ks <- seq(min(dat$julian) - 30, max(dat$julian), length = K - 2)
+  # Interval size between knots
   ks_diff <- ks[2] - ks[1]
   
+  # Add boundary knots to the start and end of the sequence. Allows more 
   lower_ks <- ks[1] - (3:1)*ks_diff
   upper_ks <- ks[K-2] + (1:3)*ks_diff
   
+  # Complete sequence of knots 
   knots <- c(lower_ks, ks, upper_ks)
   
+  # Matrix of spline coefficients over period of infections 
   Xtilde <- splineDesign(knots, (min(dat$julian)-30):max(dat$julian))
   
   
-  n<- nrow(dat)
+  # X -------------------------------------------------------------------------#
+  
+  # Initialise X
+  n <- nrow(dat)
   X <- matrix(0, n, K)
+  
   
   for(i in 1:n){
     
