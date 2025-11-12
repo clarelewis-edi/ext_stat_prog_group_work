@@ -1,32 +1,31 @@
 # -----------------------------------------------------------------------------# 
 # Clare Lewis (s2879721), Grace Sheahan (s2898645), Luke Egan (s2837709)
 #
-# Clare: 
-# Grace: 
-# Luke: 
+# Clare: Collaborated on all sections, taking a lead on questions 2 and 6.
+# Grace: Collaborated on all sections, taking a lead on questions 3 and 5
+# Luke: Collaborated on all sections, taking a lead on questions 1 and 4
 #
-# We all feel that we equally contributed to this project, primarily through 
+# We all feel that we equally contributed to this project, almost entirely through 
 # in-person collaboration along with some independent coding, roughly completing 
 # 1/3 of the work each
 #
 # Our github repository can be found at;
 # https://github.com/clarelewis-edi/ext_stat_prog_group_work
 #
-# ---- Introduction -----------------------------------------------------------#
+# ---- Introduction ------------------------------------------------------------
 # 
-# This project works with the provided data set 'engcov.txt' on deaths from Covid-19
-# in English hospitals against the day of year and aims to use this data to infer
-# a model of the new infections per day which resulted in these deaths.
+# This project works with the provided data set 'engcov.txt' on deaths from 
+# Covid-19 in English hospitals against the day of year and aims to use this data
+# to infer a model of the new infections per day which resulted in these deaths.
 
 # The 'engcov.txt' file contains records on 150 days of deaths (150 rows of data)
 # and contains 5 columns; "date", "deaths", "julian", "gov", "nhs".
 # Date - Date for which the death rates were collected
 # Julian - The day of the year corresponding to the date
-# Deaths/NHS - These rows contain equivalent data on the number of deaths from Covid
-# reported by the NHS
+# Deaths/NHS - These rows contain equivalent data on the number of deaths from 
+# Covid reported by the NHS
 
-#### ---- Q1 Computing Xtilde, X and S ----------------------------------------#
-start <- Sys.time()
+# ---- Computing Xtilde, X and S -----------------------------------------------
 # Import necessary libraries
 library(splines)
 library(ggplot2)
@@ -34,7 +33,7 @@ library(ggplot2)
 # Read in the dataset
 dat <- read.table("engcov.txt", header = T, stringsAsFactors = T)
 
-# spline_func -----------------------------------------------------------------#
+# SPLINE_FUNC
 # Constructs the spline-based matrices that will be used to fit the deconvolution
 # model to the Covid death data
 #
@@ -51,6 +50,7 @@ dat <- read.table("engcov.txt", header = T, stringsAsFactors = T)
 #     - X: Model matrix for deaths
 #
 #     - S: Penalty matrix with smoothing parameter for smoother model fit
+
 spline_func <- function(dat, K){
   
   # ---- Probability function for days from infection until death                
@@ -115,7 +115,7 @@ spline_func <- function(dat, K){
 K <- 80
 splines <- spline_func(dat, K)
 
-# pen_nll ---------------------------------------------------------------------#
+# PEN_NLL
 # Calculates the negative penalised log likelihood function
 #
 # Inputs:
@@ -129,7 +129,7 @@ splines <- spline_func(dat, K)
 #
 # Outputs:
 #     - val: vector of the negative penalised log likelihood values
-# 
+
 pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
   # To ensure that beta is positive, it is defined as the exponential of gamma
   beta <- exp(gamma)
@@ -143,7 +143,7 @@ pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
   return(as.numeric(val))
 }
 
-# grad_pen_nll ----------------------------------------------------------------#
+# GRAD_PEN_NLL
 # Calculate the gradient function based on the derivatives of the log likelihood
 # and penalty
 #
@@ -151,7 +151,7 @@ pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
 #
 # Outputs:
 #     - val: vector of negative derivative of the penalised log likelihood
-# 
+
 grad_pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
   beta <- exp(gamma)
   mu <- X %*% beta
@@ -164,47 +164,52 @@ grad_pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
   return(val)
 }
 
-# Finite Differencing ---------------------------------------------------------#
-
-# check comments in notes
-eps <- 5e-7
-
-# just calling grad function
-grad <- grad_pen_nll(y, gamma0, X, S, lambda0) # only used in finite diff
-
-est_grad <- numeric(80)
-for(i in 1:length(gamma0)){
-  gamma1 <- gamma0
-  gamma1[i] <- gamma0[i] + eps
-  pen_nll0 <- pen_nll(y, gamma0, X, S, lambda = lambda0)
-  pen_nll1 <- pen_nll(y, gamma1, X, S, lambda = lambda0)
-  est_grad[i] <- (pen_nll1 - pen_nll0)/eps
-  #print(est_grad[i]-grad[i])
-}
-
-#### Q3 #####
+# ---- Finite Differencing -----------------------------------------------------
 
 # Initial estimate of gamma values
 gamma0 <- rep(0,K)
 
 # Defining values that will be used as inputs in functions
-y <- dat$nhs # number of deaths per day
-n <- nrow(dat) # number of days, over which data is collected
-X <- splines$X # model matrix for deaths
-S <- splines$S # penalty matrix
-lambda0 <- 5e-5 # initial estimate of smoothing parameter
+y <- dat$nhs # Number of deaths per day
+n <- nrow(dat) # Number of days, over which data is collected
+X <- splines$X # Model matrix for deaths
+S <- splines$S # Penalty matrix
+lambda0 <- 5e-5 # Initial estimate of smoothing parameter
 
-# use our optimisation and gradient functions to get the optimal values of gamma
-optim_vals_1 <- optim(gamma0, pen_nll, grad_pen_nll, y = y, X = X, S = S, lambda = lambda0, method = "BFGS")
+eps <- 5e-7 # Finite differencing interval
 
-# assign variables based on optimisation output
+# Calling the gradient function plugging in the above as inputs
+grad <- grad_pen_nll(y, gamma0, X, S, lambda0)
+
+# Run pen_nll to find negative log likelihood corresponding to gamma0
+pen_nll0 <- pen_nll(y, gamma0, X, S, lambda = lambda0)
+
+est_grad <- numeric(80)
+for(i in 1:length(gamma0)){
+  gamma1 <- gamma0
+  gamma1[i] <- gamma0[i] + eps # Increase gamma0[i] by eps
+  
+  # Run pen_nll to find negative log likelihood corresponding to gamma1
+  pen_nll1 <- pen_nll(y, gamma1, X, S, lambda = lambda0)
+  est_grad[i] <- (pen_nll1 - pen_nll0)/eps # Approximate the gradient
+  # Print difference between estimated and actual gradient 
+  # print(est_grad[i]-grad[i]) # (Should ≈ 0)
+}
+
+# ---- Initial fit of model ----------------------------------------------------
+
+# Use optimisation and gradient functions to find the optimal values of gamma
+optim_vals_1 <- optim(gamma0, pen_nll, grad_pen_nll, y = y, X = X, S = S, 
+                      lambda = lambda0, method = "BFGS")
+
+# Assign variables based on optimisation output
 gamma_hat <- optim_vals_1$par
 beta_hat <- exp(gamma_hat)
-Xtilde <- splines$Xtilde
-mu <- X %*% beta_hat
-t <- (min(dat$julian)-30):max(dat$julian)
-f <- Xtilde %*% beta_hat
 
+Xtilde <- splines$Xtilde # Extract Xtilde from the output of the splines function
+mu <- X %*% beta_hat # Fitted deaths
+t <- (min(dat$julian)-30):max(dat$julian) # Infection period
+f <- Xtilde %*% beta_hat # Modelled infection curve
 
 ggplot() +
 
@@ -213,7 +218,7 @@ ggplot() +
     aes(x = dat$julian, y = mu, col = 'Fitted Deaths μ'),
   ) +
 
-  # Plot the actual observed deaths from our dataset
+  # Plot the actual observed deaths from the dataset
   geom_point(
     aes(x = dat$julian, y = dat$nhs, col = 'Observed Deaths'),
     size = 2,
@@ -238,81 +243,124 @@ ggplot() +
     x = "Day of Year (2020)",
     y = "Count",
     title = "Daily COVID Deaths and Estimated Infection Curve",
-    col = "" # we don't need a "colour" label so assigning this as empty
+    col = "" # We don't need a "colour" label so assigning this as empty
   )
 
-#### Q4 ####
-min_BIC <- function(gamma, X, S, y, lambda_vals){
-  BIC_val <- 1000 
+
+# ---- Optimising Lambda and Gamma Parameters ----------------------------------
+
+# MIN_BIC
+# Determines the optimal values based on minimising the BIC criterion
+#
+# Inputs:
+#     - gamma, X, S, y: As above in pen_nll and grad_pen_nll functions
+#     - log_lambda_vals: Sequence of log of smoothing parameters over which to 
+#                   search for the optimal lambda and corresponding gammas
+
+# Outputs:
+#     - hat_params: list containing the optimal lambda value and corresponding
+#                 gamma values
+
+min_BIC <- function(gamma, X, S, y, log_lambda_vals){
+  BIC_val <- 1000 # Defining an arbitrarily large starting value for BIC for which
+  # the BIC can be improved
+  # The log of lambda values are used as inputs to ensure positive lambda values
+  # The lambda values are found by exponentiating these log values
+  lambda_vals <- exp(log_lambda_vals)
+  
   for(i in seq_along(lambda_vals)){
-    
-    optim_vals <- optim(gamma, pen_nll, grad_pen_nll, y = y, X = X, S = S, lambda = lambda_vals[i], method = "BFGS")
-    optim_gamma <- optim_vals$par
-    gamma <- optim_gamma
+    # Run optim to find the optimal gamma values corresponding to the lambda value
+    optim_vals <- optim(gamma, pen_nll, grad_pen_nll, y = y, X = X, S = S, 
+                        lambda = lambda_vals[i], method = "BFGS")
+    optim_gamma <- optim_vals$par 
     optim_beta <- exp(optim_gamma)
-    mu <- X %*% optim_beta
     
+    mu <- X %*% optim_beta # Calculate mu
+    
+    # Defining the inputs H0 and W, and the resulting Hessian in order to
+    # calculate the BIC
     W <- diag(as.vector(y/(mu^2)))
     H0 <- t(X) %*% (W %*% X)
     H_lambda <- H0 + lambda_vals[i]*S
-    cholesk <- chol(H_lambda)
-    solved <- backsolve(cholesk,forwardsolve(t(cholesk),H0))
-    EDF <- sum(diag(solve(H_lambda, H0)))
     
-    log_lik <- sum(y * log(mu) - mu)
+    # Use cholesky decomposition to solve (H_lambda inverse * H0) and calculate
+    # the effective degrees of freedom (EDF)
+    H_lambda_decomp <- chol(H_lambda)
+    trace_input <- backsolve(H_lambda_decomp,forwardsolve(t(H_lambda_decomp),H0))
+    EDF <- sum(diag(trace_input))
+    
+    log_lik <- sum(y * log(mu) - mu) # Calculate the log likelihood
     
     n <- nrow(X)
     
-    BIC_val <- min(BIC_val, -2*log_lik + log(n)*EDF)
-
-    if (BIC_val == (-2*log_lik + log(n)*EDF)){
+    # Define initial BIC value
+    if (i == 1){
+      BIC_val <-  -2*log_lik + log(n)*EDF
+      }
+    # Update the BIC value based on comparison with current minimum value
+    else { 
+      BIC_val <- min(BIC_val, -2*log_lik + log(n)*EDF)
+    }
+    # Save the corresponding optimal gamma values if the BIC value has been updated
+    if (BIC_val == (-2*log_lik + log(n)*EDF)){  
      opt_lambda <- lambda_vals[i]
      opt_gamma <- optim_gamma
     }
   }
+  # Create list of optimal parameters to return
   hat_params <- list(lambda_hat = opt_lambda, gamma_hat = opt_gamma)
   return(hat_params)
 }
 
-lambda_vals <- exp(seq(-13, -7, length = 50))
+# Define log lambda values over which to grid search
+log_lambda_vals <- seq(-13, -7, length = 50)
+
+# Run and store output of min_BIC, and extract optimal lambda and gamma
 hat_params <- min_BIC(gamma_hat, X, S, y, lambda_vals)
 lambda_hat <- hat_params$lambda_hat
 gamma_hat_updated <- hat_params$gamma_hat
-beta_hat_updated <- exp(gamma_hat_updated)
+beta_hat_updated <- exp(gamma_hat_updated) # Calculate optimal beta
 
+# Update mu and the infection curve with optimal beta
 mu_updated <- X %*% beta_hat_updated
-t <- (min(dat$julian)-30):max(dat$julian)
 f_updated <- Xtilde %*% beta_hat_updated
 
-# Q5
+# ---- Bootstrapping------------------------------------------------------------
+
+# Define the number of bootstraps to complete and a holding matrix for the outputs
 n <- nrow(dat)
 nb <- 200
 f_b <- matrix(0, nb, length(f_updated))
 
 for (i in 1:nb){
-  wb <- tabulate(sample(n,replace=TRUE),n) ## non-para bootstrap weights
-  optim_vals_b <- optim(gamma0, pen_nll, grad_pen_nll, y = y, X = X, S = S, lambda = lambda_hat, weights = wb, method = "BFGS")
+  wb <- tabulate(sample(n,replace=TRUE),n) ## Non-parametric bootstrap weights
+  
+  # Optimise gamma (and hence beta) for the bootstrap sample
+  optim_vals_b <- optim(gamma0, pen_nll, grad_pen_nll, y = y, X = X, S = S, 
+                        lambda = lambda_hat, weights = wb, method = "BFGS")
   gamma_hat_b <- optim_vals_b$par
   beta_hat_b <- exp(gamma_hat_b)
+  # Store the bootstrapped infection model values in the holding matrix
   f_b[i,] <- Xtilde %*% beta_hat_b
 }
 
+# Find the confidence limits of the bootstrapped infection curves
 f_b_limits <- apply(f_b, 2, quantile, probs = c(0.025, 0.975))
 
+# ---- Final Plot --------------------------------------------------------------
 
 ggplot() +
   
-  # We want the confidence intervals to be furthest back on the plot so we plot
-  # those first
-  # confidence intervals determined from bootstrapping
+  # We want the confidence limits to be furthest back on the plot so we plot
+  # those first confidence limits determined from bootstrapping
   geom_ribbon(
     aes(x = t, ymin = f_b_limits[1,], ymax = f_b_limits[2,],
-        fill = 'Confidence Interval'), alpha = 0.5
+        fill = 'Confidence Limits'), alpha = 0.5
   ) +
   
   # Plot our fitted deaths (mu) next
   geom_line(
-    aes(x = dat$julian, y = mu, col = 'Fitted Deaths μ'),
+    aes(x = dat$julian, y = mu_updated, col = 'Fitted Deaths μ'),
   ) +
   
   # Add our actual observed deaths on top of that
@@ -328,14 +376,14 @@ ggplot() +
     linewidth = .75
   ) +
   
-  # same as previous graph, want to create a legend that includes each plot element
-  # so manually assigning colours here so r will create it
+  # As for the previous graph, want to create a legend that includes each plot 
+  # element so manually assigning colours here so r will create it
   scale_color_manual(values = c('Infection Curve f(t)' ='royalblue4',
                                 'Fitted Deaths μ' = 'gray11',
                                 'Observed Deaths' = 'firebrick')
   ) +
   
-  # doing the same thing as the manual colour but for the fill of the confidence interva
+  # As for the manual colour but for the fill of the confidence limits
   scale_fill_manual(values = 'lightskyblue'
   ) +
   
@@ -343,12 +391,12 @@ ggplot() +
     x = "Day of Year (2020)",
     y = "Count",
     title = "Daily COVID Deaths and Estimated Infection Curve",
-    # in this case we want the colour and fill titles both to be removed
-    col = "",
+    # Removing the colour and fill titles by leaving blank
+    col = ""
     fill = ""
   ) +
   
-  # change the theme to make the plots easier to read
+  # Change the theme to enhance plots readability
   theme_light(
     base_size = 13
   ) +
@@ -358,4 +406,3 @@ ggplot() +
     legend.position = "top",
     plot.title = element_text(face = "bold")
   ) 
-Sys.time() - start
