@@ -25,10 +25,11 @@
 # date: Date on which deaths were observed
 # julian: The day of the year corresponding to the date
 # deaths/nhs: Columns containing equivalent data on the number of deaths from 
-#               Covid reported by the NHS
+#               Covid reported by the NHS (nhs used for analysis though names 
+#               are used interchangably)
 
 
-# ---- Computing Xtilde, X and S -----------------------------------------------
+# ---- Computing Spline-Based Matrices -----------------------------------------------
 
 # Import necessary libraries
 library(splines)
@@ -76,7 +77,7 @@ spline_func <- function(dat, K){
   ks_diff <- ks[2] - ks[1] # Interval size between knots
   
   # Add boundary knots to the start and end of the sequence. Accounts for boundary
-  # splines, the tails of which could effect the edge cases
+  # splines, the tails of which could affect the edge cases
   lower_ks <- ks[1] - (3:1)*ks_diff
   upper_ks <- ks[K-2] + (1:3)*ks_diff
   knots <- c(lower_ks, ks, upper_ks)
@@ -92,11 +93,29 @@ spline_func <- function(dat, K){
   
   for(i in 1:n){
     # Define the range for the plausible infection period for deaths on day i
+    
+    # The plausible period being looked back on for possible infections of deaths 
+    # on day i are defined by the lower and upper limits below
+    
+    # Given the data infection period only extends 30 days before the first deaths
+    # early data can only look back as far as day 1 of this infection period
+    # The infection period is at most 80 days.
+    
     lower <- max(1, i - 50)
     upper <- min(29 + i, 80 + lower - 1)
     
     # Builds the ith row of the model matrix for the deaths based on the formula given
-    X[i,] <- colSums(Xtilde[lower:upper, ] * pd[(upper - lower + 1):1])
+    
+    # The model matrix for deaths is obtained by scaling the rows of the spline
+    # basis matrix by the corresponding probability of death this number of days
+    # on from infection (given by the probability distribution vector)
+    
+    Xtilde_rows <- Xtilde[lower:upper, ] 
+    pd_i_values <- pd[(upper - lower + 1):1] 
+
+    
+    X_i_mat <- Xtilde_rows * pd_i_values
+    X[i,] <- colSums(X_i_mat)
   }
   
   # ---- S
@@ -131,7 +150,7 @@ pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
   # To ensure that beta is positive, it is defined as the exponential of gamma
   # Ensures infection curve f is positive
   beta <- exp(gamma)
-  # Expected deaths per day
+  # Calculate expected deaths per day
   mu <- X %*% beta
   
   # Calculate the log-likelihood and penalty 
@@ -162,6 +181,7 @@ grad_pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
   grad_pen_nll_vec <- -d_log_lik + d_penalty
   return(grad_pen_nll_vec)
 }
+
 
 # ---- Finite Differencing -----------------------------------------------------
 # Must verify the gradient function by comparing the coded gradients with finite
@@ -197,17 +217,19 @@ for(i in 1:length(gamma0)){
   pen_nll1 <- pen_nll(y, gamma1, X, S, lambda = lambda0)
   est_grad[i] <- (pen_nll1 - pen_nll0)/eps # Approximate the gradient
   # Print difference between estimated and actual gradient 
-  # print(abs(est_grad[i]-grad[i]))# (Should be ≈ 0)
+  # print(abs(est_grad[i]-grad[i])) # (All were ≈ 0; as expected)
 }
 
 # ---- Initial fit of model ----------------------------------------------------
 
 # Optimise gamma using the BFGS method. This method uses the penalised negative
 # log-likelihood and its gradient to search for optimal values of gamma
+# (Increased number of maximum iterations to ensure convergence) 
 optim_vals_1 <- optim(gamma0, pen_nll, grad_pen_nll, y = y, X = X, S = S, 
-                      lambda = lambda0, method = "BFGS")
+                      lambda = lambda0, method = "BFGS",
+                      control = list(maxit = 1000))
 
-# Extract optimised paramter values
+# Extract optimised parameter values
 gamma_hat <- optim_vals_1$par
 beta_hat <- exp(gamma_hat)
 
@@ -261,7 +283,7 @@ ggplot() +
 #
 # Inputs:
 #     - gamma, X, S, y: As above in pen_nll and grad_pen_nll functions
-#     - log_lambda_vals: Sequence of log smoothing parameter values 
+#     - log_lambda_vals: Sequence of possible log smoothing parameter values 
 #                        over which to grid-search 
 
 # Outputs:
@@ -269,16 +291,17 @@ ggplot() +
 #                   gamma values
 
 min_BIC <- function(gamma, X, S, y, log_lambda_vals){
-  # Initialise the BIC to a large value used for initial BIC comparison
+  # Initialise the BIC to an infinitely large value used for initial BIC comparison
    BIC_val <- Inf
 
   # Sequence of log-lambda values are used as inputs to ensure positive 
   # parameter values. 
   # Exponentiate these values for sequence of lambda values to search through
   lambda_vals <- exp(log_lambda_vals)
+  
   for(i in seq_along(lambda_vals)){
     # Optimise gamma for current lambda value
-    # Increased number of maximum iterations to ensure convergence   
+    # (Increased number of maximum iterations to ensure convergence)   
     optim_vals <- optim(gamma, pen_nll, grad_pen_nll, y = y, X = X, S = S, 
                         lambda = lambda_vals[i], method = "BFGS",
                         control = list(maxit = 1000))
@@ -288,14 +311,14 @@ min_BIC <- function(gamma, X, S, y, log_lambda_vals){
     
     mu <- X %*% optim_beta 
     
-    # Compute the Hessian matrix, w.r.t beta of the negative log-likelihood at
-    # the optimatised beta values plus the scaled penalty matrix. 
+    # Compute the Hessian matrix, with respect to beta of the negative 
+    # log-likelihood at the optimatised beta values plus the scaled penalty matrix. 
     # H0 is the Hessian when the smoothing parameter is 0
     W <- diag(as.vector(y/(mu^2)))
     H0 <- t(X) %*% (W %*% X)
     H_lambda <- H0 + lambda_vals[i]*S
     
-    # Use cholesky decomposition to solve (H_lambda inverse * H0) and calculate
+    # Use Cholesky decomposition to solve (H_lambda inverse * H0) and calculate
     # the effective degrees of freedom (EDF)
     H_lambda_decomp <- chol(H_lambda)
     trace_input <- backsolve(H_lambda_decomp,
@@ -307,7 +330,7 @@ min_BIC <- function(gamma, X, S, y, log_lambda_vals){
     n <- nrow(X)
     current_BIC <- -2*log_lik + log(n)*EDF
 
-     # Save the corresponding optimal parameter values if the BIC value is improved
+    # Save the corresponding optimal parameter values if the BIC value is improved
     if (current_BIC < BIC_val) {
      BIC_val <- current_BIC
      opt_lambda <- lambda_vals[i]
@@ -324,17 +347,17 @@ log_lambda_vals <- seq(-13, -7, length = 50)
 
 # Grid-search for optimal lambda, and extract corresponding gamma and beta values
 hat_params <- min_BIC(gamma_hat, X, S, y, log_lambda_vals)
+
 lambda_hat <- hat_params$lambda_hat
+
 gamma_hat_updated <- hat_params$gamma_hat
-plot(hat_params$BIC_holding)
 beta_hat_updated <- exp(gamma_hat_updated) 
 
-# Update mu and the infection curve with optimised beta
+# Update mu and the infection curve with the optimised beta
 mu_updated <- X %*% beta_hat_updated
 f_updated <- Xtilde %*% beta_hat_updated
 
 # ---- Bootstrapping------------------------------------------------------------
-
 # Define the number of bootstraps to complete and a holding matrix for the outputs
 n <- nrow(dat)
 nb <- 200
@@ -344,8 +367,11 @@ for (i in 1:nb){
   wb <- tabulate(sample(n,replace=TRUE),n) # Non-parametric bootstrap weights
   
   # Optimise gamma (and hence beta) for the bootstrap sample
-  optim_vals_b <- optim(gamma_hat_updated, pen_nll, grad_pen_nll, y = y, X = X, S = S, 
-                        lambda = lambda_hat, weights = wb, method = "BFGS")
+  # (Converges with the default 'maxit', hence it is not defined in this run)
+  optim_vals_b <- optim(gamma_hat_updated, pen_nll, grad_pen_nll, y = y, X = X, 
+                        S = S, lambda = lambda_hat, weights = wb, method = "BFGS")#,
+                        #control = list(maxit = 1000))
+
   gamma_hat_b <- optim_vals_b$par
   beta_hat_b <- exp(gamma_hat_b)
   
