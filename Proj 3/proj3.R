@@ -119,7 +119,7 @@ splines <- spline_func(dat, K)
 #     - y: number of deaths per day
 #     - X: model matrix for deaths
 #     - S: penalty matrix
-#     - gamma: log of the coefficients of the infection model
+#     - gamma: log of the parameters of the infection model
 #     - lambda: smoothing parameter
 #     - weights: weighting of the rows of dat (default to all ones except in
 #                the case of bootstrapping)
@@ -129,6 +129,7 @@ splines <- spline_func(dat, K)
 
 pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
   # To ensure that beta is positive, it is defined as the exponential of gamma
+  # Ensures infection curve f is positive
   beta <- exp(gamma)
   # Expected deaths per day
   mu <- X %*% beta
@@ -166,6 +167,7 @@ grad_pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
 # Must verify the gradient function by comparing the coded gradients with finite
 # differencing approximations.
 
+
 # Initial estimate of gamma
 gamma0 <- rep(0,K)
 # Initial estimate of smoothing parameter
@@ -195,7 +197,7 @@ for(i in 1:length(gamma0)){
   pen_nll1 <- pen_nll(y, gamma1, X, S, lambda = lambda0)
   est_grad[i] <- (pen_nll1 - pen_nll0)/eps # Approximate the gradient
   # Print difference between estimated and actual gradient 
-  print(est_grad[i]-grad[i]) # (Should be ≈ 0)
+  # print(abs(est_grad[i]-grad[i]))# (Should be ≈ 0)
 }
 
 # ---- Initial fit of model ----------------------------------------------------
@@ -267,18 +269,20 @@ ggplot() +
 #                   gamma values
 
 min_BIC <- function(gamma, X, S, y, log_lambda_vals){
-  # Initialise the BIC to a large value used for inital BIC comparison
+  # Initialise the BIC to a large value used for initial BIC comparison
    BIC_val <- Inf
-   
-  # Sequence of log-lambda values are used as inputs to ensure positive paramter 
-  # values. 
+
+  # Sequence of log-lambda values are used as inputs to ensure positive 
+  # parameter values. 
   # Exponentiate these values for sequence of lambda values to search through
   lambda_vals <- exp(log_lambda_vals)
-  
   for(i in seq_along(lambda_vals)){
     # Optimise gamma for current lambda value
+    # Increased number of maximum iterations to ensure convergence   
     optim_vals <- optim(gamma, pen_nll, grad_pen_nll, y = y, X = X, S = S, 
-                        lambda = lambda_vals[i], method = "BFGS")
+                        lambda = lambda_vals[i], method = "BFGS",
+                        control = list(maxit = 1000))
+    
     optim_gamma <- optim_vals$par 
     optim_beta <- exp(optim_gamma)
     
@@ -302,7 +306,7 @@ min_BIC <- function(gamma, X, S, y, log_lambda_vals){
     log_lik <- sum(y * log(mu) - mu) 
     n <- nrow(X)
     current_BIC <- -2*log_lik + log(n)*EDF
-    
+
      # Save the corresponding optimal parameter values if the BIC value is improved
     if (current_BIC < BIC_val) {
      BIC_val <- current_BIC
@@ -322,7 +326,7 @@ log_lambda_vals <- seq(-13, -7, length = 50)
 hat_params <- min_BIC(gamma_hat, X, S, y, log_lambda_vals)
 lambda_hat <- hat_params$lambda_hat
 gamma_hat_updated <- hat_params$gamma_hat
-
+plot(hat_params$BIC_holding)
 beta_hat_updated <- exp(gamma_hat_updated) 
 
 # Update mu and the infection curve with optimised beta
@@ -340,7 +344,7 @@ for (i in 1:nb){
   wb <- tabulate(sample(n,replace=TRUE),n) # Non-parametric bootstrap weights
   
   # Optimise gamma (and hence beta) for the bootstrap sample
-  optim_vals_b <- optim(gamma0, pen_nll, grad_pen_nll, y = y, X = X, S = S, 
+  optim_vals_b <- optim(gamma_hat_updated, pen_nll, grad_pen_nll, y = y, X = X, S = S, 
                         lambda = lambda_hat, weights = wb, method = "BFGS")
   gamma_hat_b <- optim_vals_b$par
   beta_hat_b <- exp(gamma_hat_b)
