@@ -2,12 +2,12 @@
 # Clare Lewis (s2879721), Grace Sheahan (s2898645), Luke Egan (s2837709)
 #
 # Clare: Collaborated on all sections, taking a lead on questions 2 and 6.
-# Grace: Collaborated on all sections, taking a lead on questions 3 and 5
-# Luke: Collaborated on all sections, taking a lead on questions 1 and 4
+# Grace: Collaborated on all sections, taking a lead on questions 3 and 5.
+# Luke: Collaborated on all sections, taking a lead on questions 1 and 4.
 #
 # We all feel that we equally contributed to this project, almost entirely through 
 # in-person collaboration along with some independent coding, roughly completing 
-# 1/3 of the work each
+# 1/3 of the work each.
 #
 # Our github repository can be found at;
 # https://github.com/clarelewis-edi/ext_stat_prog_group_work
@@ -29,7 +29,7 @@
 #               are used interchangably)
 
 
-# ---- Computing Spline-Based Matrices -----------------------------------------------
+# ---- Computing Spline-Based Matrices -----------------------------------------
 
 # Import necessary libraries
 library(splines)
@@ -40,7 +40,7 @@ dat <- read.table("engcov.txt", header = T, stringsAsFactors = T)
 
 # SPLINE_FUNC
 # Constructs the spline-based matrices that will be used to fit the deconvolution
-# model to the Covid death data
+# model to the Covid-19 death data
 #
 # Inputs:
 #     - dat: Dataframe containing a column "julian" which contains the days for
@@ -104,11 +104,12 @@ spline_func <- function(dat, K){
     lower <- max(1, i - 50)
     upper <- min(29 + i, 80 + lower - 1)
     
-    # Builds the ith row of the model matrix for the deaths based on the formula given
+    # Builds the ith row of the model matrix for the deaths based on the formula 
     
     # The model matrix for deaths is obtained by scaling the rows of the spline
     # basis matrix by the corresponding probability of death this number of days
-    # on from infection (given by the probability distribution vector)
+    # on from infection (given by the probability distribution vector) and summing
+    # over the infection days to get the contributions from each spline
     
     Xtilde_rows <- Xtilde[lower:upper, ] 
     pd_i_values <- pd[(upper - lower + 1):1] 
@@ -144,7 +145,7 @@ splines <- spline_func(dat, K)
 #                the case of bootstrapping)
 #
 # Outputs:
-#     - pen_nll_val: Scaler value of the negative penalised log-likelihood 
+#     - pen_nll_val: Scalar value of the negative penalised log-likelihood 
 
 pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
   # To ensure that beta is positive, it is defined as the exponential of gamma
@@ -154,7 +155,9 @@ pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X)) ){
   mu <- X %*% beta
   
   # Calculate the log-likelihood and penalty 
-  log_lik <- sum((y * log(mu) - mu - lgamma(y + 1)) * weights)
+  # Though it is not dependent on beta, it was decided to retain y! in the function
+  # as this led to smoother BIC convergence
+  log_lik <- sum(weights*(y * log(mu) - mu - lgamma(y + 1)))
   penalty <- 0.5 * (lambda * crossprod(beta, S %*% beta))
   
   # Penalised negative log-likelihood
@@ -175,7 +178,7 @@ grad_pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
   mu <- X %*% beta
   
   # Calculate the derivatives of log-likelihood and penalty 
-  d_log_lik <- colSums((as.vector(y/mu - 1)) * t(beta * t(X)) * weights)
+  d_log_lik <- colSums(weights*(as.vector(y/mu - 1)) * t(beta * t(X)))
   d_penalty <- lambda * as.vector(diag(beta) %*% (S %*% beta))
   
   grad_pen_nll_vec <- -d_log_lik + d_penalty
@@ -184,7 +187,7 @@ grad_pen_nll <- function(y, gamma, X, S, lambda, weights = rep(1, nrow(X))){
 
 
 # ---- Finite Differencing -----------------------------------------------------
-# Must verify the gradient function by comparing the coded gradients with finite
+# Verify the gradient function by comparing the coded gradients with finite
 # differencing approximations.
 
 
@@ -280,7 +283,7 @@ ggplot() +
 # MIN_BIC
 # Searches for the optimal smoothing parameter and corresponding gamma values 
 # based on minimising the BIC criterion
-#
+# 
 # Inputs:
 #     - gamma, X, S, y: As above in pen_nll and grad_pen_nll functions
 #     - log_lambda_vals: Sequence of possible log smoothing parameter values 
@@ -326,11 +329,11 @@ min_BIC <- function(gamma, X, S, y, log_lambda_vals){
     EDF <- sum(diag(trace_input))
     
     # Calculate the log-likelihood and the BIC
-    log_lik <- sum(y * log(mu) - mu) 
+    log_lik <- sum(y * log(mu) - mu - lgamma(y + 1)) 
     n <- nrow(X)
     current_BIC <- -2*log_lik + log(n)*EDF
 
-    # Save the corresponding optimal parameter values if the BIC value is improved
+    # Save these optimal parameter values if the BIC value is improved
     if (current_BIC < BIC_val) {
      BIC_val <- current_BIC
      opt_lambda <- lambda_vals[i]
@@ -358,19 +361,19 @@ mu_updated <- X %*% beta_hat_updated
 f_updated <- Xtilde %*% beta_hat_updated
 
 # ---- Bootstrapping------------------------------------------------------------
+
 # Define the number of bootstraps to complete and a holding matrix for the outputs
 n <- nrow(dat)
 nb <- 200
 f_b <- matrix(0, nb, length(f_updated))
 
 for (i in 1:nb){
-  wb <- tabulate(sample(n,replace=TRUE),n) # Non-parametric bootstrap weights
+  wb <- tabulate(sample(n,replace=TRUE), n) # Non-parametric bootstrap weights
   
   # Optimise gamma (and hence beta) for the bootstrap sample
-  # (Converges with the default 'maxit', hence it is not defined in this run)
   optim_vals_b <- optim(gamma_hat_updated, pen_nll, grad_pen_nll, y = y, X = X, 
-                        S = S, lambda = lambda_hat, weights = wb, method = "BFGS")#,
-                        #control = list(maxit = 1000))
+                        S = S, lambda = lambda_hat, weights = wb, method = "BFGS",
+                        control = list(maxit = 1000))
 
   gamma_hat_b <- optim_vals_b$par
   beta_hat_b <- exp(gamma_hat_b)
@@ -386,26 +389,26 @@ f_b_limits <- apply(f_b, 2, quantile, probs = c(0.025, 0.975))
 
 ggplot() +
   
-  # We want the confidence limits to be furthest back on the plot so we plot
+  # Want the confidence limits to be furthest back on the plot so plot
   # those first confidence limits determined from bootstrapping
   geom_ribbon(
     aes(x = t, ymin = f_b_limits[1,], ymax = f_b_limits[2,],
         fill = 'Confidence Limits'), alpha = 0.5
   ) +
   
-  # Plot our fitted deaths (mu) next
+  # Plot the fitted deaths (mu) next
   geom_line(
     aes(x = dat$julian, y = mu_updated, col = 'Fitted Deaths μ'),
   ) +
   
-  # Add our actual observed deaths on top of that
+  # Add the actual observed deaths on top of that
   geom_point(
     aes(x = dat$julian, y = dat$nhs, col = 'Observed Deaths'),
     size = 2,
     alpha = .4
   ) +
   
-  # Finally add the infection curve f(t) updated with our optimal values 
+  # Finally add the infection curve f(t) updated with the optimal values 
   geom_line(
     aes(x = t, y = f_updated, col = 'Infection Curve f(t)'),
     linewidth = .75
@@ -441,3 +444,26 @@ ggplot() +
     legend.position = "top",
     plot.title = element_text(face = "bold")
   ) 
+
+# ---- Conclusion --------------------------------------------------------------
+
+# Using the 'engcov.txt' data, we built a model along with a confidence limit 
+# for the trajectory of new infections each day that eventually resulted in the 
+# deaths recorded in this data.
+
+# From the plot, we can see that peaks in the infections correspond with peaks in
+# death with an approximately consistent lag, reflecting the time patients were 
+# infected before succumbing to the infection.
+
+# In particular it can be seen in the plot that infection count peaked at 
+# approximately the 80th day of the year (20th of March) at approximately 1500 
+# new infections, with cases significantly dropping after this date. This peak 
+# corresponds with an increase in deaths which peak at approximately day 100 
+# (9th of April) when approximately 750 patients died.
+
+
+# (*Note: Keeping the log of y factorial (in the form of lgamma(y + 1) in the 
+# log-likelihood resulted in slightly different optimal parameters. In particular
+# the bootstrapped confidence limits where f(t) ≈ 0 were narrower. However, the 
+# inclusion also led to smoother BIC and convergence, so we made the decision to 
+# retain it in our log likelihood functions.)
